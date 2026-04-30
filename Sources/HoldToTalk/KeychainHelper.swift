@@ -24,7 +24,10 @@ enum KeychainHelper {
             kSecAttrAccount as String: account,
             kSecValueData as String: data,
         ]
-        SecItemAdd(addQuery as CFDictionary, nil)
+        let status = SecItemAdd(addQuery as CFDictionary, nil)
+        if status != errSecSuccess {
+            debugLog("[holdtotalk] Keychain save failed for \(account): OSStatus \(status)")
+        }
     }
 
     static func load(account: String) -> String? {

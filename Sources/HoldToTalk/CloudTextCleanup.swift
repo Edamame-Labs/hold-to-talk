@@ -48,6 +48,7 @@ enum CloudTextCleanup {
         prompt: String,
         baseURL: String
     ) async throws -> String {
+        try validateCloudBaseURL(baseURL)
         let systemPrompt = prompt.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
             ? TextCleanup.defaultPrompt : prompt
 
@@ -69,7 +70,7 @@ enum CloudTextCleanup {
         request.timeoutInterval = 15
         request.httpBody = try JSONSerialization.data(withJSONObject: body)
 
-        let (data, response) = try await URLSession.shared.data(for: request)
+        let (data, response) = try await cloudSession.data(for: request)
 
         guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
             let code = (response as? HTTPURLResponse)?.statusCode ?? 0
@@ -97,6 +98,7 @@ enum CloudTextCleanup {
         prompt: String,
         baseURL: String
     ) async throws -> String {
+        try validateCloudBaseURL(baseURL)
         let systemPrompt = prompt.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
             ? TextCleanup.defaultPrompt : prompt
 
@@ -118,7 +120,7 @@ enum CloudTextCleanup {
         request.timeoutInterval = 15
         request.httpBody = try JSONSerialization.data(withJSONObject: body)
 
-        let (data, response) = try await URLSession.shared.data(for: request)
+        let (data, response) = try await cloudSession.data(for: request)
 
         guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
             let code = (response as? HTTPURLResponse)?.statusCode ?? 0

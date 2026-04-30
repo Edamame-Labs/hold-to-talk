@@ -17,6 +17,7 @@ enum CloudTranscriber {
     ) async throws -> String {
         guard !audio.isEmpty else { return "" }
         guard !apiKey.isEmpty else { throw CloudTranscriberError.noAPIKey }
+        try validateCloudBaseURL(baseURL)
 
         let wavData = encodeWAV(audio, sampleRate: 16000)
 
@@ -39,7 +40,7 @@ enum CloudTranscriber {
 
         request.httpBody = body
 
-        let (data, response) = try await URLSession.shared.data(for: request)
+        let (data, response) = try await cloudSession.data(for: request)
 
         guard let httpResponse = response as? HTTPURLResponse else {
             throw CloudTranscriberError.invalidResponse

@@ -83,7 +83,14 @@ final class AudioRecorder: @unchecked Sendable {
         levelHandler?(0)
 
         guard !captured.isEmpty else { return [] }
-        return resample(buffers: captured)
+        let result = resample(buffers: captured)
+
+        // Zero audio buffer memory before releasing to prevent recovery from memory dumps.
+        for buf in captured {
+            Self.zeroBuffer(buf)
+        }
+
+        return result
     }
 
     // MARK: - Resampling
@@ -105,20 +112,25 @@ final class AudioRecorder: @unchecked Sendable {
 
         // If already 16 kHz mono, skip conversion
         if Int(srcFormat.sampleRate) == 16000 && srcFormat.channelCount == 1 {
-            return Array(UnsafeBufferPointer(start: combined.floatChannelData?[0],
-                                             count: Int(combined.frameLength)))
+            let result = Array(UnsafeBufferPointer(start: combined.floatChannelData?[0],
+                                                    count: Int(combined.frameLength)))
+            Self.zeroBuffer(combined)
+            return result
         }
 
         guard let dstFormat = AVAudioFormat(commonFormat: .pcmFormatFloat32,
                                             sampleRate: 16000, channels: 1, interleaved: false),
               let converter = AVAudioConverter(from: srcFormat, to: dstFormat) else {
-            return Array(UnsafeBufferPointer(start: combined.floatChannelData?[0],
-                                             count: Int(combined.frameLength)))
+            let result = Array(UnsafeBufferPointer(start: combined.floatChannelData?[0],
+                                                    count: Int(combined.frameLength)))
+            Self.zeroBuffer(combined)
+            return result
         }
 
         let ratio = 16000.0 / srcFormat.sampleRate
         let outCapacity = AVAudioFrameCount(Double(combined.frameLength) * ratio) + 1
         guard let output = AVAudioPCMBuffer(pcmFormat: dstFormat, frameCapacity: outCapacity) else {
+            Self.zeroBuffer(combined)
             return []
         }
 
@@ -136,11 +148,25 @@ final class AudioRecorder: @unchecked Sendable {
 
         if let error {
             print("[audio] resample error: \(error)")
+            Self.zeroBuffer(combined)
+            Self.zeroBuffer(output)
             return []
         }
 
-        return Array(UnsafeBufferPointer(start: output.floatChannelData?[0],
-                                         count: Int(output.frameLength)))
+        let result = Array(UnsafeBufferPointer(start: output.floatChannelData?[0],
+                                                count: Int(output.frameLength)))
+        Self.zeroBuffer(combined)
+        Self.zeroBuffer(output)
+        return result
+    }
+
+    /// Zero the backing memory of an audio buffer to prevent recovery from memory dumps.
+    private static func zeroBuffer(_ buffer: AVAudioPCMBuffer) {
+        guard let channelData = buffer.floatChannelData else { return }
+        let byteCount = Int(buffer.frameCapacity) * MemoryLayout<Float>.size
+        for ch in 0..<Int(buffer.format.channelCount) {
+            memset(channelData[ch], 0, byteCount)
+        }
     }
 
     private static func normalizedLevel(for buffer: AVAudioPCMBuffer) -> Float {

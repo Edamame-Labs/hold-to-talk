@@ -107,8 +107,7 @@ actor Transcriber {
         for (i, segment) in segments.enumerated() {
             let result = recognizer.decode(samples: segment, sampleRate: 16000)
             let text = result.text.trimmingCharacters(in: .whitespacesAndNewlines)
-            NSLog("[holdtotalk] Segment %d (%.1fs): \"%@\"", i, Float(segment.count) / 16000.0, text)
-            debugLog("Segment \(i) (\(String(format: "%.1fs", Float(segment.count) / 16000.0))): \"\(text)\"")
+            debugLog("[holdtotalk] Segment \(i) (\(String(format: "%.1fs", Float(segment.count) / 16000.0))): \(text.count) chars")
             if !text.isEmpty {
                 parts.append(text)
             }
@@ -116,7 +115,6 @@ actor Transcriber {
         guard !parts.isEmpty else { return "" }
         let joined = parts.joined(separator: " ")
         let final = Self.deduplicateRepeatedPhrases(joined)
-        NSLog("[holdtotalk] Final text: \"%@\"", final)
         return final
     }
 

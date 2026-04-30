@@ -1,5 +1,35 @@
 import Foundation
 
+// MARK: - Cloud URLSession
+
+/// Shared URLSession for cloud API requests. Uses default system TLS validation
+/// (certificate chain + hostname check via ATS). A single cached instance avoids
+/// leaking sessions and enables HTTP/2 connection reuse across requests.
+let cloudSession: URLSession = {
+    let config = URLSessionConfiguration.default
+    return URLSession(configuration: config)
+}()
+
+// MARK: - URL Validation
+
+enum CloudURLError: LocalizedError {
+    case insecureURL(String)
+
+    var errorDescription: String? {
+        switch self {
+        case .insecureURL(let url):
+            return "Refusing to send API request to non-HTTPS URL: \(url). Check your base URL in Settings."
+        }
+    }
+}
+
+/// Validate that a base URL uses HTTPS before sending API keys or audio over the network.
+func validateCloudBaseURL(_ baseURL: String) throws {
+    guard let url = URL(string: baseURL), url.scheme?.lowercased() == "https" else {
+        throw CloudURLError.insecureURL(baseURL)
+    }
+}
+
 // MARK: - Transcription Provider
 
 enum TranscriptionProvider: String, CaseIterable, Identifiable {
