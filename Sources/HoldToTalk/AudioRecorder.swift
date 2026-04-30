@@ -121,13 +121,16 @@ final class AudioRecorder: @unchecked Sendable {
         guard let dstFormat = AVAudioFormat(commonFormat: .pcmFormatFloat32,
                                             sampleRate: 16000, channels: 1, interleaved: false),
               let converter = AVAudioConverter(from: srcFormat, to: dstFormat) else {
-            return Array(UnsafeBufferPointer(start: combined.floatChannelData?[0],
-                                             count: Int(combined.frameLength)))
+            let result = Array(UnsafeBufferPointer(start: combined.floatChannelData?[0],
+                                                    count: Int(combined.frameLength)))
+            Self.zeroBuffer(combined)
+            return result
         }
 
         let ratio = 16000.0 / srcFormat.sampleRate
         let outCapacity = AVAudioFrameCount(Double(combined.frameLength) * ratio) + 1
         guard let output = AVAudioPCMBuffer(pcmFormat: dstFormat, frameCapacity: outCapacity) else {
+            Self.zeroBuffer(combined)
             return []
         }
 
@@ -159,8 +162,10 @@ final class AudioRecorder: @unchecked Sendable {
 
     /// Zero the backing memory of an audio buffer to prevent recovery from memory dumps.
     private static func zeroBuffer(_ buffer: AVAudioPCMBuffer) {
-        if let channelData = buffer.floatChannelData?[0] {
-            memset(channelData, 0, Int(buffer.frameCapacity) * MemoryLayout<Float>.size)
+        guard let channelData = buffer.floatChannelData else { return }
+        let byteCount = Int(buffer.frameCapacity) * MemoryLayout<Float>.size
+        for ch in 0..<Int(buffer.format.channelCount) {
+            memset(channelData[ch], 0, byteCount)
         }
     }
 

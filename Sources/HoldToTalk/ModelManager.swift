@@ -78,7 +78,9 @@ final class ModelManager: ObservableObject {
                 let tempFileURL = try await self.downloadArchive()
                 defer { try? FileManager.default.removeItem(at: tempFileURL) }
                 if Task.isCancelled { return }
-                try Self.verifyChecksum(of: tempFileURL, expected: SpeechModelInfo.expectedSHA256)
+                try await Task.detached(priority: .utility) {
+                    try Self.verifyChecksum(of: tempFileURL, expected: SpeechModelInfo.expectedSHA256)
+                }.value
                 try await self.extractArchive(tempFileURL)
                 if !Task.isCancelled {
                     await MainActor.run { self.isDownloaded = true }
