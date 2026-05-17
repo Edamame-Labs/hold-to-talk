@@ -11,9 +11,9 @@
     gtag('config', 'G-Q75FRP5M1T');
   </script>
   <title>Hold To Talk — Free Dictation for macOS</title>
-  <meta name="description" content="Free, open-source dictation for Apple Silicon Macs. Local by default with optional cloud using your own key. The code is public, and your data stays yours.">
+  <meta name="description" content="Free, open-source dictation for Apple Silicon Macs. Local by default, with hardened bring-your-own-key cloud options when you choose them.">
   <meta property="og:title" content="Hold To Talk — Free Dictation for macOS">
-  <meta property="og:description" content="Free and open-source for Apple Silicon Macs. Local by default with optional cloud using your own key.">
+  <meta property="og:description" content="Free and open-source for Apple Silicon Macs. Local by default with hardened bring-your-own-key cloud options.">
   <meta property="og:image" content="screenshot.png">
   <link rel="icon" href="logo.png" type="image/png">
   <style>
@@ -296,6 +296,8 @@
       gap: 14px;
     }
 
+    .security-grid { grid-template-columns: repeat(4, 1fr); }
+
     .feature-card { padding: 32px 26px; }
 
     .feature-card .icon-wrap {
@@ -418,6 +420,10 @@
     footer .tagline { font-size: 12px; opacity: 0.6; }
 
     /* ---- Responsive ---- */
+    @media (max-width: 860px) {
+      .security-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+
     @media (max-width: 640px) {
       .hero { padding: 72px 0 32px; }
       .hero h1 { font-size: 34px; }
@@ -425,6 +431,7 @@
       .section-heading h2 { font-size: 28px; }
       .section-heading p { font-size: 16px; }
       .features-grid { grid-template-columns: repeat(2, 1fr); }
+      .security-grid { grid-template-columns: repeat(2, 1fr); }
       .steps { flex-direction: column; align-items: center; }
       .demo-window { border-radius: 14px; padding: 4px; }
       .demo-window video { border-radius: 12px; }
@@ -432,6 +439,7 @@
 
     @media (max-width: 420px) {
       .features-grid { grid-template-columns: 1fr; }
+      .security-grid { grid-template-columns: 1fr; }
     }
   </style>
 </head>
@@ -459,7 +467,7 @@
   <div class="container">
     <img src="logo.png" alt="Hold To Talk" class="app-icon">
     <h1>Hold To Talk</h1>
-    <p class="subtitle">Voice to text for Apple Silicon Macs. Local Parakeet transcription by default, optional cloud using your own key. Hold a key, speak, release.</p>
+    <p class="subtitle">Voice to text for Apple Silicon Macs. Local Parakeet transcription by default, hardened cloud using your own key when you choose it. Hold a key, speak, release.</p>
     <a href="https://github.com/jxucoder/hold-to-talk/releases/latest/download/HoldToTalk.dmg" class="cta">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
       Download for Mac
@@ -534,6 +542,50 @@
         </div>
         <h3>Install your way</h3>
         <p>Download directly, install via Homebrew, or build from source. Your workflow, your choice.</p>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<section class="features">
+  <div class="container">
+    <div class="section-heading">
+      <h2>Security controls</h2>
+      <p>Cloud features are opt-in and locked down for direct provider connections.</p>
+    </div>
+    <div class="features-grid security-grid">
+
+      <div class="feature-card glass">
+        <div class="icon-wrap">
+          <svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+        </div>
+        <h3>This-Mac-only keys</h3>
+        <p>OpenAI and Anthropic keys are stored in the macOS Keychain for this Mac only, not in plain text or iCloud Keychain.</p>
+      </div>
+
+      <div class="feature-card glass">
+        <div class="icon-wrap">
+          <svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        </div>
+        <h3>HTTPS-only cloud</h3>
+        <p>Cloud base URLs must use HTTPS and cannot include embedded credentials, query strings, or fragments.</p>
+      </div>
+
+      <div class="feature-card glass">
+        <div class="icon-wrap">
+          <svg viewBox="0 0 24 24"><path d="M4 7h16"/><path d="M4 12h16"/><path d="M4 17h10"/><path d="M18 15l3 3m0-3l-3 3"/></svg>
+        </div>
+        <h3>No cloud cache</h3>
+        <p>Cloud requests use an ephemeral session with no cookies and no disk cache for audio or transcript traffic.</p>
+      </div>
+
+      <div class="feature-card glass">
+        <div class="icon-wrap">
+          <svg viewBox="0 0 24 24"><path d="M3 6h18"/><path d="M7 12h10"/><path d="M10 18h4"/></svg>
+        </div>
+        <h3>Redacted diagnostics</h3>
+        <p>Diagnostic logs are off by default, local only, and redact transcript content when troubleshooting is enabled.</p>
       </div>
 
     </div>
