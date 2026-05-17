@@ -141,7 +141,7 @@ These can be pre-approved via MDM PPPC (Privacy Preferences Policy Control) prof
 
 ## Security considerations
 
-- **API keys** are stored in the macOS Keychain, not in UserDefaults or plain text files
+- **API keys** are stored in the macOS Keychain for this Mac only, not in UserDefaults, iCloud Keychain, or plain text files
 - **Diagnostic logging** is off by default; when enabled, transcript text is redacted (only character/word counts are logged)
 - **Secure text fields** (password inputs) are blocked -- the app will not transcribe into them
 - **No telemetry** -- Hold to Talk includes no analytics, tracking, or phone-home behavior in the app

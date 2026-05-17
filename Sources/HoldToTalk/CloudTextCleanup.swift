@@ -48,7 +48,7 @@ enum CloudTextCleanup {
         prompt: String,
         baseURL: String
     ) async throws -> String {
-        try validateCloudBaseURL(baseURL)
+        let cloudBaseURL = try normalizedCloudBaseURL(baseURL)
         let systemPrompt = prompt.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
             ? TextCleanup.defaultPrompt : prompt
 
@@ -62,7 +62,7 @@ enum CloudTextCleanup {
             "max_tokens": 2048,
         ]
 
-        let url = URL(string: "\(baseURL)/chat/completions")!
+        let url = cloudBaseURL.appendingPathComponent("chat/completions")
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
@@ -74,8 +74,7 @@ enum CloudTextCleanup {
 
         guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
             let code = (response as? HTTPURLResponse)?.statusCode ?? 0
-            let msg = String(data: data, encoding: .utf8) ?? "Unknown error"
-            throw CloudCleanupError.apiError(provider: "OpenAI", statusCode: code, message: msg)
+            throw CloudCleanupError.apiError(provider: "OpenAI", statusCode: code)
         }
 
         guard let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
@@ -98,7 +97,7 @@ enum CloudTextCleanup {
         prompt: String,
         baseURL: String
     ) async throws -> String {
-        try validateCloudBaseURL(baseURL)
+        let cloudBaseURL = try normalizedCloudBaseURL(baseURL)
         let systemPrompt = prompt.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
             ? TextCleanup.defaultPrompt : prompt
 
@@ -111,7 +110,7 @@ enum CloudTextCleanup {
             ],
         ]
 
-        let url = URL(string: "\(baseURL)/v1/messages")!
+        let url = cloudBaseURL.appendingPathComponent("v1/messages")
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue(apiKey, forHTTPHeaderField: "x-api-key")
@@ -124,8 +123,7 @@ enum CloudTextCleanup {
 
         guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
             let code = (response as? HTTPURLResponse)?.statusCode ?? 0
-            let msg = String(data: data, encoding: .utf8) ?? "Unknown error"
-            throw CloudCleanupError.apiError(provider: "Anthropic", statusCode: code, message: msg)
+            throw CloudCleanupError.apiError(provider: "Anthropic", statusCode: code)
         }
 
         guard let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
@@ -148,16 +146,26 @@ enum CloudTextCleanup {
 // MARK: - Errors
 
 enum CloudCleanupError: LocalizedError {
-    case apiError(provider: String, statusCode: Int, message: String)
+    case apiError(provider: String, statusCode: Int)
     case invalidResponse(provider: String)
 
     var errorDescription: String? {
         switch self {
-        case .apiError(let provider, let statusCode, let message):
-            if statusCode == 401 {
+        case .apiError(let provider, let statusCode):
+            switch statusCode {
+            case 401:
                 return "Invalid \(provider) API key. Check your key in Settings."
+            case 403:
+                return "\(provider) cleanup access was denied. Check your account, model access, and base URL."
+            case 404:
+                return "\(provider) cleanup endpoint was not found. Check your base URL and model settings."
+            case 408, 425, 429:
+                return "\(provider) cleanup is rate limited or temporarily busy. Try again shortly."
+            case 500...599:
+                return "\(provider) cleanup is temporarily unavailable. Try again later."
+            default:
+                return "\(provider) cleanup error (\(statusCode)). Check your cloud settings."
             }
-            return "\(provider) cleanup error (\(statusCode)): \(message)"
         case .invalidResponse(let provider):
             return "Invalid response from \(provider) API."
         }
