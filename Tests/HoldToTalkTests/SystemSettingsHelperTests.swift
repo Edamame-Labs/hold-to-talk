@@ -11,6 +11,36 @@ final class SystemSettingsHelperTests: XCTestCase {
         XCTAssertFalse(appHasStableCodeIdentity(infoDictionary: [:]))
     }
 
+    func testCheckPostEventAccessAcceptsAccessibilityTrustWhenPreflightIsStale() {
+        var didPostTestEvent = false
+
+        XCTAssertTrue(
+            checkPostEventAccess(
+                preflight: { false },
+                accessibilityTrusted: { true },
+                postTestEvent: { didPostTestEvent = true }
+            )
+        )
+        XCTAssertFalse(didPostTestEvent)
+    }
+
+    func testCheckPostEventAccessRetriesSignalsAfterTestEvent() {
+        var preflightCalls = 0
+        var didPostTestEvent = false
+
+        XCTAssertTrue(
+            checkPostEventAccess(
+                preflight: {
+                    preflightCalls += 1
+                    return preflightCalls > 1
+                },
+                accessibilityTrusted: { false },
+                postTestEvent: { didPostTestEvent = true }
+            )
+        )
+        XCTAssertTrue(didPostTestEvent)
+    }
+
     func testRequestPostEventAccessOpensSettingsOnFirstAttemptWhenSystemShowsNoDialog() {
         let defaults = UserDefaults(suiteName: #function)!
         defer { defaults.removePersistentDomain(forName: #function) }
@@ -53,29 +83,6 @@ final class SystemSettingsHelperTests: XCTestCase {
         XCTAssertEqual(result, .granted)
         XCTAssertFalse(didOpenSettings)
         XCTAssertFalse(defaults.bool(forKey: postEventPromptedDefaultsKey))
-    }
-
-    func testRequestInputMonitoringAccessOpensSettingsOnFirstAttemptWhenSystemShowsNoDialog() {
-        let defaults = UserDefaults(suiteName: #function)!
-        defer { defaults.removePersistentDomain(forName: #function) }
-
-        var openedAnchor: String?
-        var requestCallCount = 0
-
-        let result = requestInputMonitoringAccess(
-            defaults: defaults,
-            preflight: { false },
-            requestAccess: {
-                requestCallCount += 1
-                return false
-            },
-            settingsOpener: { openedAnchor = $0 }
-        )
-
-        XCTAssertEqual(result, .openedSettings)
-        XCTAssertEqual(requestCallCount, 1)
-        XCTAssertEqual(openedAnchor, "Privacy_ListenEvent")
-        XCTAssertTrue(defaults.bool(forKey: inputMonitoringPromptedDefaultsKey))
     }
 
     func testSecondAttemptStillOpensSettingsWithoutRetryingRequestAPI() {

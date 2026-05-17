@@ -56,17 +56,10 @@ final class DictationEngine: ObservableObject {
         #endif
         return checkPostEventAccess()
     }()
-    @Published var hasInputMonitoring: Bool = {
-        #if DEBUG
-        if DebugFlags.skipPermissions { return true }
-        #endif
-        return CGPreflightListenEventAccess()
-    }()
 
     @AppStorage(onboardingCompleteDefaultsKey) var onboardingComplete = false
     @AppStorage(transcriptionProfileDefaultsKey) var transcriptionProfile = TranscriptionProfile.balanced.rawValue
-    @AppStorage(hotkeyChoiceDefaultsKey) var hotkeyChoice = HotkeyManager.Hotkey.ctrl.rawValue
-    @AppStorage(inputMonitoringPromptedDefaultsKey) private var hasPromptedInputMonitoring = false
+    @AppStorage(hotkeyChoiceDefaultsKey) var hotkeyChoice = HotkeyManager.Hotkey.fn.rawValue
     @AppStorage(textCleanupEnabledDefaultsKey) var textCleanupEnabled = TextCleanup.checkAvailability() == .available
     @AppStorage(textCleanupPromptDefaultsKey) var textCleanupPrompt = TextCleanup.defaultPrompt
     @AppStorage(hotwordsDefaultsKey) var hotwords: String = ""
@@ -165,16 +158,13 @@ final class DictationEngine: ObservableObject {
             }
         }
 
-        if !hasInputMonitoring {
-            debugLog("[holdtotalk] Input Monitoring missing -- prompt deferred to onboarding/settings.")
-        }
         if !hasPostEvent {
             debugLog("[holdtotalk] PostEvent (keyboard access) missing -- prompt deferred to onboarding/settings.")
         }
 
         recorder.prepare()
 
-        debugLog("[holdtotalk] Permissions Mic=\(hasMicrophone), PostEvent=\(hasPostEvent), InputMon=\(hasInputMonitoring)")
+        debugLog("[holdtotalk] Permissions Mic=\(hasMicrophone), PostEvent=\(hasPostEvent)")
 
         hotkeyManager.onPress = { [weak self] in
             DispatchQueue.main.async { self?.beginRecording() }
@@ -197,7 +187,7 @@ final class DictationEngine: ObservableObject {
 
         prewarmTranscriber()
 
-        debugLog("[holdtotalk] Ready -- hold [\(hotkeyChoice)] to dictate.")
+        debugLog("[holdtotalk] Ready -- hold [\(resolvedHotkey.displayName)] to dictate.")
     }
 
     func stop() {
@@ -233,8 +223,7 @@ final class DictationEngine: ObservableObject {
         onboardingComplete = false
         UserDefaults.standard.set(0, forKey: onboardingStepDefaultsKey)
         transcriptionProfile = TranscriptionProfile.balanced.rawValue
-        hotkeyChoice = HotkeyManager.Hotkey.ctrl.rawValue
-        hasPromptedInputMonitoring = false
+        hotkeyChoice = HotkeyManager.Hotkey.fn.rawValue
         textCleanupEnabled = TextCleanup.checkAvailability() == .available
         textCleanupPrompt = TextCleanup.defaultPrompt
         hotwords = ""
@@ -247,6 +236,8 @@ final class DictationEngine: ObservableObject {
         anthropicBaseURL = ""
         KeychainHelper.delete(account: "openai")
         KeychainHelper.delete(account: "anthropic")
+        UserDefaults.standard.set(false, forKey: openaiAPIKeySavedDefaultsKey)
+        UserDefaults.standard.set(false, forKey: anthropicAPIKeySavedDefaultsKey)
 
         modelManager.handleFreshOnboardingReset()
         refreshPermissionSnapshot()
@@ -272,10 +263,6 @@ final class DictationEngine: ObservableObject {
         if !hasPostEvent {
             debugLog("[holdtotalk] PostEvent (keyboard access) not granted -- text insertion will be blocked by macOS.")
         }
-        if !hasInputMonitoring {
-            debugLog("[holdtotalk] Input Monitoring not granted -- global hotkey may not trigger in other apps.")
-        }
-
         recordingTargetAppPID = NSWorkspace.shared.frontmostApplication?.processIdentifier
         recordingTargetBundleID = NSWorkspace.shared.frontmostApplication?.bundleIdentifier
         debugLog("[holdtotalk] Recording target: \(recordingTargetBundleID ?? "nil")")
@@ -327,8 +314,10 @@ final class DictationEngine: ObservableObject {
                 debugLog("[holdtotalk] Transcribed \(String(format: "%.1f", duration))s audio in \(String(format: "%.2f", transcribeTime))s [\(profile.rawValue)]")
             case .openAI:
                 guard let apiKey = KeychainHelper.load(account: "openai"), !apiKey.isEmpty else {
+                    UserDefaults.standard.set(false, forKey: openaiAPIKeySavedDefaultsKey)
                     throw CloudTranscriberError.noAPIKey
                 }
+                UserDefaults.standard.set(true, forKey: openaiAPIKeySavedDefaultsKey)
                 let model = openaiTranscriptionModel.isEmpty ? "gpt-4o-mini-transcribe" : openaiTranscriptionModel
                 let baseURL = openaiBaseURL.isEmpty ? "https://api.openai.com/v1" : openaiBaseURL
                 // Fold cleanup instructions into the transcription prompt for
@@ -376,11 +365,13 @@ final class DictationEngine: ObservableObject {
                         cleaned = await TextCleanup.cleanup(raw, prompt: textCleanupPrompt)
                     case .openAI:
                         let apiKey = KeychainHelper.load(account: "openai") ?? ""
+                        UserDefaults.standard.set(!apiKey.isEmpty, forKey: openaiAPIKeySavedDefaultsKey)
                         let model = openaiCleanupModel.isEmpty ? CleanupProvider.openAI.defaultModel : openaiCleanupModel
                         let baseURL = openaiBaseURL.isEmpty ? nil : openaiBaseURL
                         cleaned = await CloudTextCleanup.cleanup(raw, provider: .openAI, apiKey: apiKey, model: model, prompt: textCleanupPrompt, baseURL: baseURL)
                     case .anthropic:
                         let apiKey = KeychainHelper.load(account: "anthropic") ?? ""
+                        UserDefaults.standard.set(!apiKey.isEmpty, forKey: anthropicAPIKeySavedDefaultsKey)
                         let model = anthropicCleanupModel.isEmpty ? CleanupProvider.anthropic.defaultModel : anthropicCleanupModel
                         let baseURL = anthropicBaseURL.isEmpty ? nil : anthropicBaseURL
                         cleaned = await CloudTextCleanup.cleanup(raw, provider: .anthropic, apiKey: apiKey, model: model, prompt: textCleanupPrompt, baseURL: baseURL)
@@ -477,13 +468,11 @@ final class DictationEngine: ObservableObject {
         if DebugFlags.skipPermissions {
                 hasMicrophone = true
             hasPostEvent = true
-            hasInputMonitoring = true
             return
         }
         #endif
         hasMicrophone = AVCaptureDevice.authorizationStatus(for: .audio) == .authorized
         hasPostEvent = checkPostEventAccess()
-        hasInputMonitoring = CGPreflightListenEventAccess()
     }
 
     // MARK: - Legacy Migration

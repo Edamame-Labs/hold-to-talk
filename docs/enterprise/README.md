@@ -130,11 +130,12 @@ defaults write com.holdtotalk.app openaiCleanupModel -string "gpt-4o-mini"
 
 ## Permissions
 
-macOS will prompt each employee for three permissions on first launch:
+macOS will prompt each employee for two permissions on first launch:
 
 - **Microphone** -- recording audio
 - **Accessibility** -- inserting text into apps
-- **Input Monitoring** -- detecting the global hotkey
+
+Hold to Talk does not explicitly request Input Monitoring. Regular hold shortcuts are registered with macOS; modifier-only shortcuts use Accessibility-trusted modifier-state events.
 
 These can be pre-approved via MDM PPPC (Privacy Preferences Policy Control) profiles using the app's bundle identifier `com.holdtotalk.app`.
 

@@ -1,3 +1,4 @@
+import Darwin
 import Foundation
 
 struct SystemRequirements: Equatable {
@@ -142,10 +143,16 @@ struct SystemCompatibility: Equatable {
     }
 
     private static let systemIsAppleSilicon: Bool = {
+        var value: Int32 = 0
+        var size = MemoryLayout<Int32>.size
+        if sysctlbyname("hw.optional.arm64", &value, &size, nil, 0) == 0 {
+            return value == 1
+        }
+
         #if arch(arm64)
-        true
+        return true
         #else
-        false
+        return false
         #endif
     }()
 

@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-Hold To Talk is a macOS menu bar app for hold-to-talk dictation. Hold a hotkey, speak, release, and transcribed text is inserted into the active app. Local by default with optional bring-your-own-key cloud transcription (OpenAI) and text cleanup (OpenAI, Anthropic).
+Hold To Talk is a macOS hold-to-talk dictation app with Dock presence and a menu bar status control. Hold a hotkey, speak, release, and transcribed text is inserted into the active app. Local by default with optional bring-your-own-key cloud transcription (OpenAI) and text cleanup (OpenAI, Anthropic).
 
 ## Tech Stack
 
