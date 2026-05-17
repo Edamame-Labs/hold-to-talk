@@ -21,6 +21,8 @@ let openaiCleanupModelDefaultsKey = "openaiCleanupModel"
 let anthropicCleanupModelDefaultsKey = "anthropicCleanupModel"
 let openaiBaseURLDefaultsKey = "openaiBaseURL"
 let anthropicBaseURLDefaultsKey = "anthropicBaseURL"
+let openaiAPIKeySavedDefaultsKey = "openaiAPIKeySaved"
+let anthropicAPIKeySavedDefaultsKey = "anthropicAPIKeySaved"
 
 enum OnboardingLaunchPreparation: Equatable {
     case none
@@ -97,7 +99,6 @@ func reopenOnboardingForCurrentInstall(
         forKey: onboardingStepDefaultsKey
     )
     defaults.removeObject(forKey: postEventPromptedDefaultsKey)
-    defaults.removeObject(forKey: inputMonitoringPromptedDefaultsKey)
     defaults.set(normalizedAppBundlePath(currentAppURL), forKey: onboardingCompletedAppPathDefaultsKey)
 }
 
@@ -160,7 +161,6 @@ func resetPersistedAppStateForFreshOnboarding(
 
 private func allPermissionsGrantedAndModelReady() -> Bool {
     guard checkPostEventAccess() else { return false }
-    guard CGPreflightListenEventAccess() else { return false }
     guard AVCaptureDevice.authorizationStatus(for: .audio) == .authorized else { return false }
     return ModelManager.isModelDownloaded
 }

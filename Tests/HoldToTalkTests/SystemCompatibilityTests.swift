@@ -81,6 +81,26 @@ final class SystemCompatibilityTests: XCTestCase {
         )
     }
 
+    func testCompatibilityRejectsNonAppleSiliconWhenMacOSIsSupported() {
+        let requirements = SystemRequirements(
+            minimumMacOSVersion: OperatingSystemVersion(majorVersion: 15, minorVersion: 0, patchVersion: 0)
+        )
+        let compatibility = SystemCompatibility(
+            requirements: requirements,
+            currentMacOSVersion: OperatingSystemVersion(majorVersion: 15, minorVersion: 1, patchVersion: 0),
+            isAppleSiliconMac: false
+        )
+
+        XCTAssertFalse(compatibility.isSupported)
+        XCTAssertTrue(compatibility.meetsMinimumMacOS)
+        XCTAssertFalse(compatibility.meetsArchitecture)
+        XCTAssertEqual(compatibility.requirements.summaryText, "macOS 15+ and Apple Silicon")
+        XCTAssertEqual(
+            compatibility.statusDetailText,
+            "This Mac is running macOS 15.1 and does not meet the Apple Silicon requirement."
+        )
+    }
+
     private func versionsMatch(
         _ lhs: OperatingSystemVersion?,
         _ rhs: OperatingSystemVersion

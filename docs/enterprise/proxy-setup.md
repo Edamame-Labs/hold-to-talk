@@ -201,7 +201,7 @@ Once the proxy is running and MDM configuration is pushed:
 
 1. Employee installs Hold To Talk (Homebrew, DMG, or MDM)
 2. App launches pre-configured with cloud provider and proxy URL
-3. Employee grants macOS permissions (Microphone, Accessibility, Input Monitoring)
+3. Employee grants macOS permissions (Microphone, Accessibility)
 4. Employee starts dictating -- no API key management, no model download
 
 If using Okta/OIDC tokens with expiration, you'll need a mechanism to refresh the token in Keychain periodically (a small background agent or login script).

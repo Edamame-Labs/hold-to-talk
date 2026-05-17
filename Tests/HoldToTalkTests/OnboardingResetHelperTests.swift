@@ -88,9 +88,8 @@ final class OnboardingResetHelperTests: XCTestCase {
         defaults.set(true, forKey: onboardingCompleteDefaultsKey)
         defaults.set(3, forKey: onboardingStepDefaultsKey)
         defaults.set(true, forKey: postEventPromptedDefaultsKey)
-        defaults.set(true, forKey: inputMonitoringPromptedDefaultsKey)
         defaults.set("small", forKey: whisperModelDefaultsKey)
-        defaults.set("shift", forKey: hotkeyChoiceDefaultsKey)
+        defaults.set("option_space", forKey: hotkeyChoiceDefaultsKey)
 
         let appURL = URL(fileURLWithPath: "/Applications/HoldToTalk.app", isDirectory: true)
         reopenOnboardingForCurrentInstall(
@@ -103,9 +102,8 @@ final class OnboardingResetHelperTests: XCTestCase {
         XCTAssertTrue(defaults.bool(forKey: onboardingNeedsResumeAfterAppMoveDefaultsKey))
         XCTAssertEqual(defaults.integer(forKey: onboardingStepDefaultsKey), 1)
         XCTAssertFalse(defaults.bool(forKey: postEventPromptedDefaultsKey))
-        XCTAssertFalse(defaults.bool(forKey: inputMonitoringPromptedDefaultsKey))
         XCTAssertEqual(defaults.string(forKey: whisperModelDefaultsKey), "small")
-        XCTAssertEqual(defaults.string(forKey: hotkeyChoiceDefaultsKey), "shift")
+        XCTAssertEqual(defaults.string(forKey: hotkeyChoiceDefaultsKey), "option_space")
         XCTAssertEqual(defaults.string(forKey: onboardingCompletedAppPathDefaultsKey), appURL.path)
     }
 

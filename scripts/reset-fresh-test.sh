@@ -24,7 +24,7 @@ Removes Hold To Talk.app and app-specific local state so you can test from a cle
 - app preferences, caches, logs, saved state
 - sandbox container data
 - downloaded speech models
-- TCC permissions for Microphone, Accessibility, Keyboard Access, and Input Monitoring
+- TCC permissions for Microphone, Accessibility, and Keyboard Access
 
 If /Applications/Hold To Talk.app exists and is not writable by your current user,
 re-run with:
@@ -174,7 +174,7 @@ if [[ "${ASSUME_YES}" -ne 1 ]]; then
     cat <<EOF
 This will reset Hold To Talk macOS permissions for user ${APP_USER} (${USER_HOME}):
 EOF
-    print_path "TCC: Microphone, Accessibility, ListenEvent"
+    print_path "TCC: Microphone, Accessibility"
     print_path "App install and local app state will be preserved"
   else
     cat <<EOF
@@ -183,7 +183,7 @@ EOF
     for path in "${APP_PATHS[@]}"; do
       print_path "${path}"
     done
-    print_path "TCC: Microphone, Accessibility, ListenEvent"
+    print_path "TCC: Microphone, Accessibility"
   fi
   printf 'Continue? [y/N] '
   read -r reply
@@ -217,7 +217,6 @@ for bid in "${BUNDLE_ID}" "${DEBUG_BUNDLE_ID}"; do
   run_as_app_user tccutil reset Microphone "${bid}" >/dev/null 2>&1 || true
   run_as_app_user tccutil reset Accessibility "${bid}" >/dev/null 2>&1 || true
   run_as_app_user tccutil reset PostEvent "${bid}" >/dev/null 2>&1 || true
-  run_as_app_user tccutil reset ListenEvent "${bid}" >/dev/null 2>&1 || true
 done
 run_as_app_user killall cfprefsd >/dev/null 2>&1 || true
 

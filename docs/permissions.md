@@ -1,10 +1,14 @@
 # Permission System (macOS)
 
-This app uses three macOS privacy permissions:
+This app uses two macOS privacy permissions:
 
 1. `Microphone` (`kTCCServiceMicrophone`)
 2. `PostEvent` (`kTCCServicePostEvent`) — appears as "Accessibility" in System Settings
-3. `Input Monitoring` (`kTCCServiceListenEvent`)
+
+Hold to Talk does not explicitly request Input Monitoring. Regular hold
+shortcuts are registered with macOS via the system hotkey API. Modifier-only
+shortcuts use AppKit modifier-state events after the app is trusted in the
+Accessibility pane.
 
 ## How Detection Works
 
@@ -12,17 +16,15 @@ Current checks are done in code (on launch, in onboarding, and when app becomes 
 
 - Microphone: `AVCaptureDevice.authorizationStatus(for: .audio)`
 - PostEvent (keyboard access): `CGPreflightPostEventAccess()`
-- Input Monitoring: `CGPreflightListenEventAccess()`
 
 Prompt APIs:
 
 - Microphone: `AVCaptureDevice.requestAccess(for: .audio)`
 - PostEvent (keyboard access): `CGRequestPostEventAccess()`
-- Input Monitoring: `CGRequestListenEventAccess()`
 
 ## Important macOS Limitation
 
-The app **cannot** silently add itself to Input Monitoring or PostEvent.
+The app **cannot** silently add itself to PostEvent.
 Only macOS can grant these permissions after user approval in system UI.
 
 So the correct UX is:
@@ -37,11 +39,11 @@ macOS has three separate TCC services under the "Accessibility" umbrella:
 
 - **Accessibility** (`kTCCServiceAccessibility`): Full AXUIElement access. NOT sandbox-compatible.
 - **PostEvent** (`kTCCServicePostEvent`): CGEvent posting (keyboard simulation). Sandbox-compatible.
-- **ListenEvent** (`kTCCServiceListenEvent`): CGEventTap monitoring. Sandbox-compatible.
+- **ListenEvent** (`kTCCServiceListenEvent`): CGEventTap monitoring. Sandbox-compatible, but not used by Hold to Talk.
 
-This app only needs PostEvent (to type dictated text via CGEvent keyboard simulation)
-and ListenEvent (for global hotkey detection). It does NOT use the Accessibility framework
-(AXUIElement APIs), which would violate App Store guideline 2.4.5.
+This app only needs PostEvent to type dictated text via CGEvent keyboard simulation.
+It does NOT use the Accessibility framework (AXUIElement APIs), which would
+violate App Store guideline 2.4.5.
 
 ## Clean User Test (from scratch)
 

@@ -13,7 +13,7 @@
     gtag('config', 'G-Q75FRP5M1T');
   </script>
   <title>Privacy Policy - Hold to Talk</title>
-  <meta name="description" content="Privacy policy for the Hold to Talk app and website. Learn what stays on-device, how optional cloud features work with your own API keys, and how website analytics work.">
+  <meta name="description" content="Privacy policy for the Hold to Talk app and website. Learn what stays on-device, how cloud features work with your own API keys, and how website analytics work.">
   <link rel="icon" href="logo.png" type="image/png">
   <style>
     :root {
@@ -247,20 +247,20 @@
       <h3>What the app does with your data</h3>
       <p>Hold to Talk records microphone audio only while you hold the dictation hotkey. By default, speech recognition runs locally on your Mac using on-device models. Audio and transcribed text are not sent to Hold to Talk servers.</p>
 
-      <h3>Optional cloud features (bring your own key)</h3>
-      <p>You can optionally enable cloud-powered transcription (OpenAI) or text cleanup (OpenAI, Anthropic) by providing your own API key in Settings. When cloud features are enabled:</p>
+      <h3>Cloud features (bring your own key)</h3>
+      <p>Hold to Talk requires Apple Silicon and uses local transcription by default. You can optionally enable cloud transcription or cleanup with your own OpenAI-compatible key. When cloud features are enabled:</p>
       <ul>
         <li>Audio or transcription text is sent <strong>directly from your Mac to the provider</strong> (e.g., api.openai.com or api.anthropic.com). Hold to Talk does not operate any proxy or relay server.</li>
         <li>Your API key is stored in the <strong>macOS Keychain</strong>, not in plain text.</li>
         <li>Hold to Talk <strong>never sees, collects, or stores</strong> your API key, audio, or transcription text.</li>
         <li>The provider's own privacy policy and data retention rules apply.</li>
       </ul>
-      <p>Cloud features are <strong>off by default</strong>. If you do not add an API key, the app operates entirely on-device.</p>
+      <p>Cloud features are <strong>off by default</strong>.</p>
 
       <h3>Audio</h3>
       <ul>
         <li>Microphone audio is captured only during an active dictation session.</li>
-        <li>When using on-device transcription (default), audio is processed locally in memory and is not sent over the network.</li>
+        <li>When using on-device transcription, audio is processed locally in memory and is not sent over the network.</li>
         <li>When using cloud transcription, audio is sent directly to the provider you configured. It is not sent to Hold to Talk.</li>
         <li>Audio is not stored as recordings by Hold to Talk.</li>
       </ul>
@@ -299,7 +299,7 @@
       <ul>
         <li><strong>Microphone</strong> for voice input</li>
         <li><strong>Accessibility</strong> for text insertion and interaction support</li>
-        <li><strong>Input Monitoring</strong> for reliable global hotkey detection</li>
+        <li>Hold to Talk does <strong>not</strong> explicitly request Input Monitoring. Regular hold shortcuts are registered with macOS; modifier-only shortcuts use Accessibility-trusted modifier-state events.</li>
       </ul>
       <p>These permissions are managed by macOS and can be revoked at any time in System Settings.</p>
 

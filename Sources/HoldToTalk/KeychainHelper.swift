@@ -5,7 +5,8 @@ import Security
 enum KeychainHelper {
     private static let service = "com.holdtotalk.apikeys"
 
-    static func save(account: String, key: String) {
+    @discardableResult
+    static func save(account: String, key: String) -> Bool {
         let data = Data(key.utf8)
 
         // Remove any existing item first.
@@ -16,7 +17,7 @@ enum KeychainHelper {
         ]
         SecItemDelete(deleteQuery as CFDictionary)
 
-        guard !key.isEmpty else { return } // treat empty string as deletion
+        guard !key.isEmpty else { return true } // treat empty string as deletion
 
         let addQuery: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
@@ -27,7 +28,9 @@ enum KeychainHelper {
         let status = SecItemAdd(addQuery as CFDictionary, nil)
         if status != errSecSuccess {
             debugLog("[holdtotalk] Keychain save failed for \(account): OSStatus \(status)")
+            return false
         }
+        return true
     }
 
     static func load(account: String) -> String? {

@@ -1,9 +1,9 @@
 import AppKit
+import ApplicationServices
 import CoreGraphics
 import Foundation
 
 let postEventPromptedDefaultsKey = "hasPromptedPostEvent"
-let inputMonitoringPromptedDefaultsKey = "hasPromptedInputMonitoring"
 let stableCodeIdentityInfoPlistKey = "HTTStableCodeIdentity"
 
 enum PermissionRequestResult: Equatable {
@@ -12,22 +12,32 @@ enum PermissionRequestResult: Equatable {
     case openedSettings
 }
 
-/// Checks whether PostEvent access is granted.
+/// Checks whether the app has keyboard-control access.
 ///
 /// `CGPreflightPostEventAccess()` is known to cache its result for the lifetime of the
 /// process. Once it returns `false`, it may keep returning `false` even after the user
-/// grants permission in System Settings. The only fully reliable fix is to relaunch.
+/// grants permission in System Settings. Accessibility trust reflects the pane we ask
+/// the user to enable and is a more reliable signal for ad-hoc local builds.
 /// As a best-effort heuristic, we also attempt a test CGEvent post — if the system
 /// silently accepts it, the permission is granted even though preflight still says no.
-func checkPostEventAccess() -> Bool {
-    if CGPreflightPostEventAccess() { return true }
+func checkPostEventAccess(
+    preflight: () -> Bool = { CGPreflightPostEventAccess() },
+    accessibilityTrusted: () -> Bool = { AXIsProcessTrusted() },
+    postTestEvent: () -> Void = postNoOpMouseMoveEvent
+) -> Bool {
+    if preflight() { return true }
+    if accessibilityTrusted() { return true }
+
     // Best-effort: try posting a no-visible-effect event (mouse-move to current position).
-    // If PostEvent is granted, the post succeeds silently. If not, it's silently dropped.
-    // We check preflight again after the post in case it refreshes the cache.
-    guard let event = CGEvent(source: nil) else { return false }
+    // Check both signals again afterward in case the post refreshed cached state.
+    postTestEvent()
+    return preflight() || accessibilityTrusted()
+}
+
+private func postNoOpMouseMoveEvent() {
+    guard let event = CGEvent(source: nil) else { return }
     event.type = .mouseMoved
     event.post(tap: .cghidEventTap)
-    return CGPreflightPostEventAccess()
 }
 
 /// Relaunches the app. Used when PostEvent permission is granted in System Settings
@@ -66,10 +76,18 @@ func openSystemSettings(_ anchor: String) {
     }
 }
 
+func isSystemSettingsApplication(_ application: NSRunningApplication?) -> Bool {
+    guard let application else { return false }
+    if application.bundleIdentifier == "com.apple.systempreferences" {
+        return true
+    }
+    return ["System Settings", "System Preferences"].contains(application.localizedName ?? "")
+}
+
 @discardableResult
 func requestPostEventAccess(
     defaults: UserDefaults = .standard,
-    preflight: () -> Bool = checkPostEventAccess,
+    preflight: () -> Bool = { checkPostEventAccess() },
     requestAccess: () -> Bool = CGRequestPostEventAccess,
     settingsOpener: (String) -> Void = openSystemSettings
 ) -> PermissionRequestResult {
@@ -77,23 +95,6 @@ func requestPostEventAccess(
         defaults: defaults,
         promptedDefaultsKey: postEventPromptedDefaultsKey,
         settingsAnchor: "Privacy_Accessibility",
-        preflight: preflight,
-        requestAccess: requestAccess,
-        settingsOpener: settingsOpener
-    )
-}
-
-@discardableResult
-func requestInputMonitoringAccess(
-    defaults: UserDefaults = .standard,
-    preflight: () -> Bool = CGPreflightListenEventAccess,
-    requestAccess: () -> Bool = CGRequestListenEventAccess,
-    settingsOpener: (String) -> Void = openSystemSettings
-) -> PermissionRequestResult {
-    requestPrivacyPermissionAccess(
-        defaults: defaults,
-        promptedDefaultsKey: inputMonitoringPromptedDefaultsKey,
-        settingsAnchor: "Privacy_ListenEvent",
         preflight: preflight,
         requestAccess: requestAccess,
         settingsOpener: settingsOpener

@@ -4,7 +4,7 @@
 
 <h1 align="center">Hold To Talk</h1>
 
-<p align="center">Free, open-source voice dictation for macOS. Hold a key, speak, release -- your words appear wherever your cursor is. Local by default, with optional bring-your-own-key cloud transcription.</p>
+<p align="center">Free, open-source voice dictation for Apple Silicon Macs. Hold a key, speak, release -- your words appear wherever your cursor is. Local by default, with optional cloud using your own key.</p>
 
 <p align="center">
   <a href="https://jxucoder.github.io/hold-to-talk/demo.mp4">
@@ -19,17 +19,18 @@
 </p>
 
 - **Free and open-source** -- no subscription, no paywall. Inspect the code, build it yourself, or install a signed release.
-- **Local and private by default** -- powered by [sherpa-onnx](https://github.com/k2-fsa/sherpa-onnx) + [NVIDIA Parakeet TDT 0.6B](https://huggingface.co/nvidia/parakeet-tdt-0.6b-v2). No accounts, no tracking. Audio stays on your Mac unless you opt in to cloud.
-- **Optional cloud transcription** -- bring your own OpenAI API key for cloud-powered transcription. Your key, your account, direct to the provider -- Hold to Talk never sees your data.
+- **Apple Silicon required** -- built around local speech recognition with [sherpa-onnx](https://github.com/k2-fsa/sherpa-onnx) + [NVIDIA Parakeet TDT 0.6B](https://huggingface.co/nvidia/parakeet-tdt-0.6b-v2).
+- **Local by default** -- no accounts, no tracking. Audio stays on your Mac unless you choose cloud transcription with your own key.
+- **Bring your own key** -- supported Macs can use an OpenAI-compatible API key instead of the local model. Your key, your account, direct to the provider -- Hold to Talk never sees your data.
 - **Fast** -- optimized for low-latency dictation with an int8-quantized on-device speech model, or cloud models when you want peak accuracy.
 - **Works everywhere** -- dictate into any app: Slack, Notes, your IDE, email, browser.
 - **Text cleanup** (optional) -- fix grammar, punctuation, and filler words via Apple Intelligence (on-device, macOS 26+), OpenAI, or Anthropic with your own API key.
 - **Auto-updates** -- direct downloads update in-app via [Sparkle](https://sparkle-project.org).
-- **Stays out of your way** -- lives in your menu bar. Hold a key to record, release to paste.
+- **Stays close at hand** -- opens as a normal Mac app and keeps a menu bar status control. Hold a key to record, release to paste.
 
 ## Install
 
-**Requirements:** macOS 15+, Apple Silicon.
+**Requirements:** macOS 15+ and Apple Silicon.
 
 ### Download
 
@@ -45,8 +46,8 @@ brew install jxucoder/tap/holdtotalk
 
 On first launch, Hold to Talk guides you through:
 
-1. Granting **Microphone**, **Accessibility**, and **Input Monitoring** permissions
-2. Downloading the Parakeet TDT speech model (~640 MB, one-time)
+1. Granting **Microphone** and **Accessibility** permissions
+2. Downloading the Parakeet TDT speech model, or connecting your own API key as a fallback
 3. Choosing your hotkey
 
 ### Build from source
@@ -65,19 +66,19 @@ make test-reset     # full uninstall + reset all state + reset permissions
 
 ## Usage
 
-1. Launch -- appears in menu bar as a mic icon
-2. Hold **Ctrl** (default) to record
+1. Launch -- appears in the Dock and as a menu bar mic icon
+2. Hold **Fn** (default) to record
 3. Release to transcribe and insert into the active window
-4. Click the menu bar icon for status and settings
+4. Use the app window or menu bar icon for status and settings
 
 ### Settings
 
 | Setting | Default | Options |
 |---|---|---|
-| Hotkey | Control | Control, Option, Shift, Right Option |
+| Hotkey | Fn | Fn, Control, Option, Command, Shift, F13-F19, Option+Space, Control+Space, Command+Shift+Space |
 | Transcription profile | Balanced | Fast, Balanced, Best |
-| Transcription provider | On-Device | On-Device, OpenAI (BYO key) |
-| Text cleanup | On (if available) | On/Off -- Apple Intelligence, OpenAI, or Anthropic (BYO key) |
+| Transcription provider | On-Device | On-Device, OpenAI (your key) |
+| Text cleanup | On (if available) | On/Off -- Apple Intelligence, OpenAI, or Anthropic (your key) |
 | Cleanup prompt | (default) | Customizable instructions |
 | Launch at Login | Off | On/Off |
 | Diagnostic logging | Off | On/Off -- local only, transcript text redacted |
@@ -85,15 +86,15 @@ make test-reset     # full uninstall + reset all state + reset permissions
 ## Architecture
 
 ```
-HoldToTalkApp       SwiftUI menu bar app, entry point
+HoldToTalkApp       SwiftUI app with Dock presence and menu bar status control
 DictationEngine     Orchestrator: record -> transcribe -> cleanup -> insert
 AudioRecorder       AVAudioEngine mic capture, resamples to 16 kHz mono
 Transcriber         sherpa-onnx offline recognizer + Silero VAD segmentation
-CloudTranscriber    Optional OpenAI-compatible cloud transcription (BYO API key)
+CloudTranscriber    Optional OpenAI-compatible cloud transcription (your API key)
 TextCleanup         Optional on-device cleanup via Apple Intelligence (macOS 26+)
-CloudTextCleanup    Optional cloud cleanup via OpenAI or Anthropic (BYO API key)
+CloudTextCleanup    Optional cloud cleanup via OpenAI or Anthropic (your API key)
 TextInserter        CGEvent unicode insertion or clipboard paste (per-app strategy)
-HotkeyManager       NSEvent global/local monitor for modifier keys
+HotkeyManager       Global hold shortcuts, no explicit Input Monitoring request
 ModelManager        Parakeet TDT model download and lifecycle
 RecordingHUD        Floating overlay with live waveform during recording
 OnboardingView      Guided setup: permissions, model download, hotkey test
@@ -125,7 +126,7 @@ This combination lets the app focus on UX (hotkey management, text insertion, re
 macOS will prompt for:
 - **Microphone** -- recording audio
 - **Accessibility** (Keyboard Access) -- inserting text into apps
-- **Input Monitoring** -- detecting the global hotkey
+- **No explicit Input Monitoring request** -- regular shortcuts are registered with macOS; modifier-only shortcuts use Accessibility-trusted modifier-state events.
 
 ## Notes
 
@@ -138,7 +139,7 @@ Contributions welcome. Please open an issue to discuss larger changes before sub
 
 ## Privacy
 
-By default, everything runs on your Mac -- no accounts, no tracking. If you opt in to cloud transcription or cleanup, audio or text is sent directly to the provider (OpenAI or Anthropic) using your own API key. Hold to Talk never proxies, stores, or has access to your data. API keys are stored in the macOS Keychain. Diagnostic logs are off by default, local only, and redact transcript text. See [Privacy Policy](PRIVACY.md).
+Transcription runs on your Apple Silicon Mac by default -- no accounts, no tracking. If you opt in to cloud transcription or cleanup, audio or text is sent directly to the provider (OpenAI or Anthropic) using your own API key. Hold to Talk never proxies, stores, or has access to your data. API keys are stored in the macOS Keychain. Diagnostic logs are off by default, local only, and redact transcript text. See [Privacy Policy](PRIVACY.md).
 
 ## License
 
