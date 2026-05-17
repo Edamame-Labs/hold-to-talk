@@ -17,12 +17,12 @@ enum CloudTranscriber {
     ) async throws -> String {
         guard !audio.isEmpty else { return "" }
         guard !apiKey.isEmpty else { throw CloudTranscriberError.noAPIKey }
-        try validateCloudBaseURL(baseURL)
+        let cloudBaseURL = try normalizedCloudBaseURL(baseURL)
 
         let wavData = encodeWAV(audio, sampleRate: 16000)
 
         let boundary = UUID().uuidString
-        let url = URL(string: "\(baseURL)/audio/transcriptions")!
+        let url = cloudBaseURL.appendingPathComponent("audio/transcriptions")
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
@@ -47,8 +47,7 @@ enum CloudTranscriber {
         }
 
         guard httpResponse.statusCode == 200 else {
-            let errorBody = String(data: data, encoding: .utf8) ?? "Unknown error"
-            throw CloudTranscriberError.apiError(statusCode: httpResponse.statusCode, message: errorBody)
+            throw CloudTranscriberError.apiError(statusCode: httpResponse.statusCode)
         }
 
         // response_format=text returns plain text
@@ -101,7 +100,7 @@ enum CloudTranscriber {
 enum CloudTranscriberError: LocalizedError {
     case noAPIKey
     case invalidResponse
-    case apiError(statusCode: Int, message: String)
+    case apiError(statusCode: Int)
 
     var errorDescription: String? {
         switch self {
@@ -109,11 +108,21 @@ enum CloudTranscriberError: LocalizedError {
             return "OpenAI API key is not set. Add your key in Settings."
         case .invalidResponse:
             return "Invalid response from transcription API."
-        case .apiError(let statusCode, let message):
-            if statusCode == 401 {
+        case .apiError(let statusCode):
+            switch statusCode {
+            case 401:
                 return "Invalid OpenAI API key. Check your key in Settings."
+            case 403:
+                return "Transcription API access was denied. Check your account, model access, and base URL."
+            case 404:
+                return "Transcription API endpoint was not found. Check your base URL and model settings."
+            case 408, 425, 429:
+                return "Transcription API is rate limited or temporarily busy. Try again shortly."
+            case 500...599:
+                return "Transcription API is temporarily unavailable. Try again later."
+            default:
+                return "Transcription API error (\(statusCode)). Check your cloud settings."
             }
-            return "Transcription API error (\(statusCode)): \(message)"
         }
     }
 }

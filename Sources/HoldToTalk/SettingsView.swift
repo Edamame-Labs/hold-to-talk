@@ -467,7 +467,7 @@ struct SettingsView: View {
         }
 
         Section("Storage") {
-            helperText("Connections are stored in the macOS Keychain. Hold to Talk reads them only when cloud dictation or cloud cleanup is used.")
+            helperText("Connections are stored in the macOS Keychain for this Mac only. Hold to Talk reads them only when cloud dictation or cloud cleanup is used.")
         }
         }
     }

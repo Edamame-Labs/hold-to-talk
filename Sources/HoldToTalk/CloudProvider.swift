@@ -3,30 +3,85 @@ import Foundation
 // MARK: - Cloud URLSession
 
 /// Shared URLSession for cloud API requests. Uses default system TLS validation
-/// (certificate chain + hostname check via ATS). A single cached instance avoids
-/// leaking sessions and enables HTTP/2 connection reuse across requests.
+/// (certificate chain + hostname check via ATS), with no cookies or disk cache
+/// for audio/transcript traffic.
 let cloudSession: URLSession = {
-    let config = URLSessionConfiguration.default
+    let config = URLSessionConfiguration.ephemeral
+    config.urlCache = nil
+    config.requestCachePolicy = .reloadIgnoringLocalCacheData
+    config.httpShouldSetCookies = false
+    config.httpCookieAcceptPolicy = .never
+    config.httpCookieStorage = nil
     return URLSession(configuration: config)
 }()
 
 // MARK: - URL Validation
 
 enum CloudURLError: LocalizedError {
-    case insecureURL(String)
+    case invalidURL
+    case insecureURL
+    case credentialsNotAllowed
+    case queryOrFragmentNotAllowed
 
     var errorDescription: String? {
         switch self {
-        case .insecureURL(let url):
-            return "Refusing to send API request to non-HTTPS URL: \(url). Check your base URL in Settings."
+        case .invalidURL:
+            return "Cloud base URL must be a valid HTTPS URL."
+        case .insecureURL:
+            return "Refusing to send API request to a non-HTTPS URL. Check your base URL in Settings."
+        case .credentialsNotAllowed:
+            return "Cloud base URL must not include usernames or passwords."
+        case .queryOrFragmentNotAllowed:
+            return "Cloud base URL must not include query strings or fragments."
         }
     }
 }
 
+/// Normalize and validate a cloud base URL before sending API keys or audio over the network.
+func normalizedCloudBaseURL(_ baseURL: String) throws -> URL {
+    let trimmed = baseURL.trimmingCharacters(in: .whitespacesAndNewlines)
+    guard !trimmed.isEmpty, var components = URLComponents(string: trimmed) else {
+        throw CloudURLError.invalidURL
+    }
+
+    guard components.scheme?.lowercased() == "https" else {
+        throw CloudURLError.insecureURL
+    }
+    components.scheme = "https"
+
+    guard let host = components.host, !host.isEmpty else {
+        throw CloudURLError.invalidURL
+    }
+
+    guard components.user == nil, components.password == nil else {
+        throw CloudURLError.credentialsNotAllowed
+    }
+
+    guard components.query == nil, components.fragment == nil else {
+        throw CloudURLError.queryOrFragmentNotAllowed
+    }
+
+    components.path = components.path.removingTrailingSlashesForBaseURL()
+
+    guard let url = components.url else {
+        throw CloudURLError.invalidURL
+    }
+    return url
+}
+
 /// Validate that a base URL uses HTTPS before sending API keys or audio over the network.
 func validateCloudBaseURL(_ baseURL: String) throws {
-    guard let url = URL(string: baseURL), url.scheme?.lowercased() == "https" else {
-        throw CloudURLError.insecureURL(baseURL)
+    _ = try normalizedCloudBaseURL(baseURL)
+}
+
+private extension String {
+    func removingTrailingSlashesForBaseURL() -> String {
+        guard count > 1 else { return self == "/" ? "" : self }
+        var value = self
+        while value.count > 1 && value.hasSuffix("/") {
+            value.removeLast()
+        }
+        return value == "/" ? "" : value
     }
 }
 

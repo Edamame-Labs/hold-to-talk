@@ -139,7 +139,7 @@ Contributions welcome. Please open an issue to discuss larger changes before sub
 
 ## Privacy
 
-Transcription runs on your Apple Silicon Mac by default -- no accounts, no tracking. If you opt in to cloud transcription or cleanup, audio or text is sent directly to the provider (OpenAI or Anthropic) using your own API key. Hold to Talk never proxies, stores, or has access to your data. API keys are stored in the macOS Keychain. Diagnostic logs are off by default, local only, and redact transcript text. See [Privacy Policy](PRIVACY.md).
+Transcription runs on your Apple Silicon Mac by default -- no accounts, no tracking. If you opt in to cloud transcription or cleanup, audio or text is sent directly to the provider (OpenAI or Anthropic) using your own API key. Hold to Talk never proxies, stores, or has access to your data. API keys are stored in the macOS Keychain for this Mac only. Diagnostic logs are off by default, local only, and redact transcript text. See [Privacy Policy](PRIVACY.md).
 
 ## License
 
