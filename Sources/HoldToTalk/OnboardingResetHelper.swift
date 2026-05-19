@@ -36,8 +36,7 @@ func shouldResetAppStateForFreshOnboarding(defaults: UserDefaults = .standard) -
         return true
     }
     #endif
-    return !defaults.bool(forKey: onboardingCompleteDefaultsKey)
-        && !defaults.bool(forKey: onboardingNeedsResumeAfterAppMoveDefaultsKey)
+    return false
 }
 
 func onboardingLaunchPreparation(
@@ -55,7 +54,7 @@ func onboardingLaunchPreparation(
     }
 
     if !defaults.bool(forKey: onboardingCompleteDefaultsKey) {
-        return .fullReset
+        return .none
     }
 
     let currentPath = normalizedAppBundlePath(currentAppURL)

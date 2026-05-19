@@ -2,19 +2,21 @@ import XCTest
 @testable import HoldToTalk
 
 final class OnboardingResetHelperTests: XCTestCase {
-    func testOnboardingLaunchPreparationRequestsFullResetWhenOnboardingIncomplete() {
+    func testOnboardingLaunchPreparationResumesWhenOnboardingIncomplete() {
         let defaults = UserDefaults(suiteName: #function)!
         defer { defaults.removePersistentDomain(forName: #function) }
 
         defaults.set(false, forKey: onboardingCompleteDefaultsKey)
+        defaults.set(2, forKey: onboardingStepDefaultsKey)
 
         XCTAssertEqual(
             onboardingLaunchPreparation(
                 defaults: defaults,
                 currentAppURL: URL(fileURLWithPath: "/Applications/HoldToTalk.app", isDirectory: true)
             ),
-            .fullReset
+            .none
         )
+        XCTAssertEqual(defaults.integer(forKey: onboardingStepDefaultsKey), 2)
     }
 
     func testOnboardingLaunchPreparationStoresPathForExistingCompletedInstall() {
@@ -53,13 +55,13 @@ final class OnboardingResetHelperTests: XCTestCase {
         )
     }
 
-    func testShouldResetAppStateForFreshOnboardingWhenOnboardingIncomplete() {
+    func testShouldNotResetAppStateForFreshOnboardingWhenOnboardingIncomplete() {
         let defaults = UserDefaults(suiteName: #function)!
         defer { defaults.removePersistentDomain(forName: #function) }
 
         defaults.set(false, forKey: onboardingCompleteDefaultsKey)
 
-        XCTAssertTrue(shouldResetAppStateForFreshOnboarding(defaults: defaults))
+        XCTAssertFalse(shouldResetAppStateForFreshOnboarding(defaults: defaults))
     }
 
     func testShouldNotResetAppStateForFreshOnboardingWhenOnboardingComplete() {

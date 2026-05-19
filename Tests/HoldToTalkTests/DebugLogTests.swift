@@ -18,6 +18,7 @@ final class DebugLogTests: XCTestCase {
     func testSecureInputFailureReportExposesUserFacingError() {
         let report = TextInserter.InsertReport(
             success: false,
+            confirmed: false,
             method: nil,
             attempts: ["secureInput=on", "blocked=secureInput"],
             failureReason: .secureInput

@@ -349,6 +349,8 @@ final class HotkeyManager {
 
     var onPress: (() -> Void)?
     var onRelease: (() -> Void)?
+    var onRegistrationFailure: ((String) -> Void)?
+    private(set) var lastRegistrationFailure: String?
 
     private static let hotkeySignature: OSType = 0x4854544B // "HTTK"
     private static let hotkeyID: UInt32 = 1
@@ -448,10 +450,14 @@ final class HotkeyManager {
         )
 
         if status == noErr {
+            lastRegistrationFailure = nil
             debugLog("[hotkey] Registered \(hotkey.rawValue)")
         } else {
             hotKeyRef = nil
+            let message = "Hotkey \"\(hotkey.displayName)\" could not be registered (error \(status)). It may be in use by another app."
+            lastRegistrationFailure = message
             debugLog("[hotkey] Failed to register \(hotkey.rawValue): \(status)")
+            onRegistrationFailure?(message)
         }
     }
 

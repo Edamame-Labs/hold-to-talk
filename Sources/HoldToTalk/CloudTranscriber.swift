@@ -2,6 +2,14 @@ import Foundation
 
 /// Speech-to-text via an OpenAI-compatible `/audio/transcriptions` endpoint.
 enum CloudTranscriber {
+    /// Maximum recording length accepted for cloud transcription (seconds).
+    static let maxRecordingSeconds: TimeInterval = 300
+
+    static func validateRecordingDuration(_ duration: TimeInterval) throws {
+        guard duration <= maxRecordingSeconds else {
+            throw CloudTranscriberError.recordingTooLong(maxSeconds: Int(maxRecordingSeconds))
+        }
+    }
 
     /// Transcribe 16 kHz mono float audio via the OpenAI transcription API.
     ///
@@ -101,6 +109,7 @@ enum CloudTranscriberError: LocalizedError {
     case noAPIKey
     case invalidResponse
     case apiError(statusCode: Int)
+    case recordingTooLong(maxSeconds: Int)
 
     var errorDescription: String? {
         switch self {
@@ -108,6 +117,9 @@ enum CloudTranscriberError: LocalizedError {
             return "OpenAI API key is not set. Add your key in Settings."
         case .invalidResponse:
             return "Invalid response from transcription API."
+        case .recordingTooLong(let maxSeconds):
+            let minutes = maxSeconds / 60
+            return "Recording is too long for cloud transcription (max \(minutes) minutes). Use local transcription or record a shorter clip."
         case .apiError(let statusCode):
             switch statusCode {
             case 401:

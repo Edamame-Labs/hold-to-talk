@@ -4,17 +4,21 @@ import AppKit
 enum TextInserter {
     enum FailureReason {
         case secureInput
+        case wrongTargetApp
 
         var userFacingError: String {
             switch self {
             case .secureInput:
                 return "Secure text input is active. Dictation is unavailable in password and other protected fields."
+            case .wrongTargetApp:
+                return "Could not focus the app you were dictating into. Switch back to that app and try again."
             }
         }
     }
 
     struct InsertReport {
         let success: Bool
+        let confirmed: Bool
         let method: String?
         let attempts: [String]
         let failureReason: FailureReason?
@@ -23,7 +27,7 @@ enum TextInserter {
             if let failureReason {
                 return "Insert blocked. \(failureReason.userFacingError) " + attempts.joined(separator: " | ")
             }
-            if success, let method {
+            if success, confirmed, let method {
                 return "Inserted via \(method)."
             }
             if let method {
@@ -33,7 +37,13 @@ enum TextInserter {
         }
 
         var userFacingError: String? {
-            failureReason?.userFacingError
+            if let failureReason {
+                return failureReason.userFacingError
+            }
+            if !confirmed {
+                return "Text insertion could not be confirmed. Check the target app and try again."
+            }
+            return nil
         }
     }
 
@@ -57,12 +67,36 @@ enum TextInserter {
         let typingCharDelayMicros: useconds_t
     }
 
-    static func insert(_ text: String, targetBundleID: String? = nil) -> InsertReport {
+    static func insert(
+        _ text: String,
+        targetBundleID: String? = nil,
+        targetPID: pid_t? = nil
+    ) -> InsertReport {
         guard !text.isEmpty else {
-            return InsertReport(success: false, method: nil, attempts: ["empty text"], failureReason: nil)
+            return InsertReport(
+                success: false,
+                confirmed: false,
+                method: nil,
+                attempts: ["empty text"],
+                failureReason: nil
+            )
         }
 
         var attempts: [String] = []
+        if let targetPID {
+            let focus = ensureTargetAppFocused(pid: targetPID, bundleID: targetBundleID)
+            attempts.append(focus.attempt)
+            if !focus.ready {
+                return InsertReport(
+                    success: false,
+                    confirmed: false,
+                    method: nil,
+                    attempts: attempts,
+                    failureReason: .wrongTargetApp
+                )
+            }
+        }
+
         let bundleID = targetBundleID ?? NSWorkspace.shared.frontmostApplication?.bundleIdentifier ?? "unknown"
         let profile = profile(for: bundleID)
         attempts.append("app=\(bundleID)")
@@ -74,6 +108,7 @@ enum TextInserter {
             attempts.append("blocked=secureInput")
             return InsertReport(
                 success: false,
+                confirmed: false,
                 method: nil,
                 attempts: attempts,
                 failureReason: .secureInput
@@ -89,10 +124,22 @@ enum TextInserter {
                 ) {
                 case .success:
                     attempts.append("pass\(pass + 1):\(strategy.rawValue)=ok")
-                    return InsertReport(success: true, method: strategy.rawValue, attempts: attempts, failureReason: nil)
+                    return InsertReport(
+                        success: true,
+                        confirmed: true,
+                        method: strategy.rawValue,
+                        attempts: attempts,
+                        failureReason: nil
+                    )
                 case .tentative:
                     attempts.append("pass\(pass + 1):\(strategy.rawValue)=tentative")
-                    return InsertReport(success: true, method: strategy.rawValue, attempts: attempts, failureReason: nil)
+                    return InsertReport(
+                        success: false,
+                        confirmed: false,
+                        method: strategy.rawValue,
+                        attempts: attempts,
+                        failureReason: nil
+                    )
                 case .fail:
                     attempts.append("pass\(pass + 1):\(strategy.rawValue)=fail")
                 }
@@ -100,7 +147,32 @@ enum TextInserter {
             usleep(35_000)
         }
 
-        return InsertReport(success: false, method: nil, attempts: attempts, failureReason: nil)
+        return InsertReport(success: false, confirmed: false, method: nil, attempts: attempts, failureReason: nil)
+    }
+
+    private static func ensureTargetAppFocused(pid: pid_t, bundleID: String?) -> (ready: Bool, attempt: String) {
+        guard let app = NSRunningApplication(processIdentifier: pid) else {
+            return (false, "targetApp=notRunning")
+        }
+        if app.bundleIdentifier == Bundle.main.bundleIdentifier {
+            return (false, "targetApp=self")
+        }
+
+        for attempt in 1...4 {
+            if NSWorkspace.shared.frontmostApplication?.processIdentifier == pid {
+                if let bundleID, NSWorkspace.shared.frontmostApplication?.bundleIdentifier != bundleID {
+                    return (false, "targetApp=bundleMismatch")
+                }
+                return (true, "targetApp=focused")
+            }
+            app.activate()
+            usleep(40_000)
+            if attempt < 4 {
+                continue
+            }
+        }
+
+        return (false, "targetApp=focusFailed")
     }
 
     private static func run(
@@ -291,10 +363,14 @@ enum TextInserter {
         keyDown.post(tap: .cgAnnotatedSessionEventTap)
         keyUp.post(tap: .cgAnnotatedSessionEventTap)
 
-        // Wait for the target app to process CMD+V and read from the pasteboard.
-        // Pasteboard reads don't change observable state, so a fixed delay is
-        // the only reliable approach. 400ms accommodates heavily loaded systems.
-        usleep(400_000)
+        // Give the target app time to read the pasteboard before restoring it.
+        var waited: useconds_t = 0
+        let step: useconds_t = 25_000
+        let maxWait: useconds_t = 500_000
+        while waited < maxWait {
+            usleep(step)
+            waited += step
+        }
         restoreClipboard(pasteboard, items: savedItems)
         return true
     }

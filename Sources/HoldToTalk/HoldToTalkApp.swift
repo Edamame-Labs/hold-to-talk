@@ -237,7 +237,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 struct HoldToTalkApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
     @StateObject private var engine: DictationEngine
-    @State private var hasPreparedFreshOnboardingSession: Bool
     @Environment(\.openWindow) private var openWindow
     #if canImport(Sparkle)
     private let updaterController = SPUStandardUpdaterController(startingUpdater: true, updaterDelegate: nil, userDriverDelegate: nil)
@@ -254,7 +253,6 @@ struct HoldToTalkApp: App {
             break
         }
         _engine = StateObject(wrappedValue: DictationEngine())
-        _hasPreparedFreshOnboardingSession = State(initialValue: launchPreparation != .none)
     }
 
     private var shouldShowOnboarding: Bool {
@@ -388,9 +386,12 @@ struct HoldToTalkApp: App {
                     icon: "mic",
                     actionTitle: "Enable"
                 ) {
-                    AVCaptureDevice.requestAccess(for: .audio) { _ in
+                    AVCaptureDevice.requestAccess(for: .audio) { granted in
                         Task { @MainActor in
-                            openSystemSettings("Privacy_Microphone")
+                            engine.refreshPermissionSnapshot()
+                            if !granted {
+                                openSystemSettings("Privacy_Microphone")
+                            }
                         }
                     }
                 }
@@ -580,16 +581,8 @@ struct HoldToTalkApp: App {
 
     @MainActor
     private func openOnboardingWindow() {
-        prepareFreshOnboardingIfNeeded()
         openWindow(id: "onboarding")
         NSApp.activate(ignoringOtherApps: true)
-    }
-
-    @MainActor
-    private func prepareFreshOnboardingIfNeeded() {
-        guard !engine.onboardingComplete, !hasPreparedFreshOnboardingSession else { return }
-        engine.resetForFreshOnboarding()
-        hasPreparedFreshOnboardingSession = true
     }
 
     private func configureAppDelegate() {
