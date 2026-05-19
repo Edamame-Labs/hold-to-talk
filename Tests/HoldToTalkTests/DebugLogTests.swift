@@ -30,4 +30,17 @@ final class DebugLogTests: XCTestCase {
         )
         XCTAssertTrue(report.summary.contains("Secure text input is active."))
     }
+
+    func testSuccessfulInsertionReportDoesNotExposeUserFacingError() {
+        let report = TextInserter.InsertReport(
+            success: true,
+            confirmed: true,
+            method: "unicodeChunked",
+            attempts: ["pass1:unicodeChunked=tentative"],
+            failureReason: nil
+        )
+
+        XCTAssertNil(report.userFacingError)
+        XCTAssertEqual(report.summary, "Inserted via unicodeChunked.")
+    }
 }

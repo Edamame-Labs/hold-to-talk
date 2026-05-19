@@ -55,12 +55,15 @@ actor Transcriber {
         guard recognizer == nil else { return }
 
         if let loadTask {
-            recognizer = try await loadTask.value
+            let loadedRecognizer = try await loadTask.value
             if hotwords != currentHotwords {
+                self.loadTask = nil
                 recognizer = nil
                 hasCompletedDecodeWarmup = false
                 try await loadModel(numThreads: numThreads, hotwords: hotwords)
+                return
             }
+            recognizer = loadedRecognizer
             return
         }
 

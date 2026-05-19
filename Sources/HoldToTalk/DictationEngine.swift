@@ -83,6 +83,7 @@ final class DictationEngine: ObservableObject {
     private var transcriberWarmupTask: Task<Void, Never>?
     private var completedWarmup = false
     private var dictationTask: Task<Void, Never>?
+    private var activeDictationID = 0
 
     init() {
         recorder.levelHandler = { [weak self] level in
@@ -94,7 +95,7 @@ final class DictationEngine: ObservableObject {
             DispatchQueue.main.async {
                 guard let self, self.state == .recording else { return }
                 self.lastError = "Maximum recording length reached (\(AudioRecorder.maxRecordingSeconds / 60) minutes)."
-                Task { await self.endRecording() }
+                self.finishActiveRecording()
             }
         }
 
@@ -281,6 +282,7 @@ final class DictationEngine: ObservableObject {
         if state == .transcribing {
             dictationTask?.cancel()
             dictationTask = nil
+            activeDictationID += 1
             state = .idle
             recordingLevel = 0
             recordingTargetAppPID = nil
@@ -291,9 +293,15 @@ final class DictationEngine: ObservableObject {
     }
 
     private func handleHotkeyRelease() {
+        finishActiveRecording()
+    }
+
+    private func finishActiveRecording() {
         dictationTask?.cancel()
+        activeDictationID += 1
+        let taskID = activeDictationID
         dictationTask = Task { [weak self] in
-            await self?.endRecording()
+            await self?.endRecording(taskID: taskID)
         }
     }
 
@@ -335,22 +343,19 @@ final class DictationEngine: ObservableObject {
         }
     }
 
-    private func endRecording() async {
+    private func endRecording(taskID: Int) async {
+        guard taskID == activeDictationID else { return }
         guard state == .recording else { return }
         var audio = recorder.stop()
         recordingLevel = 0
         defer { zeroAudioSamples(&audio) }
         guard !Task.isCancelled else {
-            state = .idle
-            recordingTargetAppPID = nil
-            recordingTargetBundleID = nil
+            completeDictationIfCurrent(taskID: taskID)
             return
         }
         guard !audio.isEmpty else {
-            state = .idle
             lastError = nil
-            recordingTargetAppPID = nil
-            recordingTargetBundleID = nil
+            completeDictationIfCurrent(taskID: taskID)
             return
         }
 
@@ -400,9 +405,7 @@ final class DictationEngine: ObservableObject {
 
             guard !raw.isEmpty else {
                 debugLog("[holdtotalk] (no speech detected)")
-                state = .idle
-                recordingTargetAppPID = nil
-                recordingTargetBundleID = nil
+                completeDictationIfCurrent(taskID: taskID)
                 return
             }
             lastError = nil
@@ -458,6 +461,9 @@ final class DictationEngine: ObservableObject {
             } else {
                 finalText = raw
             }
+
+            try Task.checkCancellation()
+            guard taskID == activeDictationID else { return }
             lastCleanText = finalText
             if let cleanupWarning {
                 lastError = cleanupWarning
@@ -467,6 +473,8 @@ final class DictationEngine: ObservableObject {
 
             reactivateRecordingTargetAppIfNeeded()
             try? await Task.sleep(nanoseconds: 80_000_000)
+            try Task.checkCancellation()
+            guard taskID == activeDictationID else { return }
             let insertText = finalText + " "
             let insertBundleID = recordingTargetBundleID
             let insertPID = recordingTargetAppPID
@@ -491,16 +499,26 @@ final class DictationEngine: ObservableObject {
                 debugLog("[holdtotalk] Insert unconfirmed. \(report.attempts.joined(separator: " | "))")
             }
         } catch is CancellationError {
-            debugLog("[holdtotalk] Dictation cancelled.")
+            if taskID == activeDictationID {
+                debugLog("[holdtotalk] Dictation cancelled.")
+            }
         } catch {
-            lastError = error.localizedDescription
-            debugLog("[holdtotalk] Error: \(error)")
+            if taskID == activeDictationID {
+                lastError = error.localizedDescription
+                debugLog("[holdtotalk] Error: \(error)")
+            }
         }
 
+        completeDictationIfCurrent(taskID: taskID)
+    }
+
+    private func completeDictationIfCurrent(taskID: Int) {
+        guard taskID == activeDictationID else { return }
         state = .idle
         recordingLevel = 0
         recordingTargetAppPID = nil
         recordingTargetBundleID = nil
+        dictationTask = nil
     }
 
     private var resolvedHotkey: HotkeyManager.Hotkey {
