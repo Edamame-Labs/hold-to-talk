@@ -131,6 +131,8 @@ macOS will prompt for:
 ## Notes
 
 - Secure text fields (password inputs) are intentionally blocked.
+- Terminal-like apps require confirmation before dictation is inserted because text can execute as shell commands if it lands at a prompt.
+- Some browser and Electron targets use temporary clipboard paste for reliable insertion. Hold to Talk restores the previous clipboard when the paste completes and leaves the clipboard untouched if another app changes it during that window, but other local clipboard managers may still observe the transient dictated text.
 - Direct downloads support in-app updates via Sparkle. App Store builds use App Store distribution.
 
 ## Contributing

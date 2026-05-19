@@ -38,6 +38,50 @@ enum TextCleanup {
         - Do NOT add, remove, or change any other words.
         """
 
+    static func validatedCleanedOutput(raw: String, cleaned: String) -> String {
+        let candidate = cleaned.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !candidate.isEmpty else { return raw }
+
+        let rawCharacterCount = max(raw.count, 1)
+        let maximumCharacterCount = rawCharacterCount < 40
+            ? rawCharacterCount + 80
+            : max(rawCharacterCount * 2, rawCharacterCount + 200)
+        guard candidate.count <= maximumCharacterCount else {
+            debugLog("[holdtotalk] Cleanup output rejected: too long")
+            return raw
+        }
+
+        let rawWords = normalizedWords(raw)
+        let cleanedWords = normalizedWords(candidate)
+        guard !cleanedWords.isEmpty else { return raw }
+
+        let maximumWordCount = rawWords.count < 6
+            ? max(rawWords.count * 3, rawWords.count + 4)
+            : max(rawWords.count * 2, rawWords.count + 20)
+        guard cleanedWords.count <= maximumWordCount else {
+            debugLog("[holdtotalk] Cleanup output rejected: too many words")
+            return raw
+        }
+
+        guard rawWords.count >= 6 else { return candidate }
+
+        let rawVocabulary = Set(rawWords)
+        let retained = cleanedWords.filter { rawVocabulary.contains($0) }.count
+        let retainedRatio = Double(retained) / Double(cleanedWords.count)
+        guard retainedRatio >= 0.45 else {
+            debugLog("[holdtotalk] Cleanup output rejected: low transcript overlap")
+            return raw
+        }
+
+        return candidate
+    }
+
+    private static func normalizedWords(_ text: String) -> [String] {
+        text.lowercased()
+            .split { !$0.isLetter && !$0.isNumber }
+            .map(String.init)
+    }
+
     #if canImport(FoundationModels)
     @available(macOS 26, *)
     private static func _checkAvailability() -> TextCleanupAvailability {
@@ -95,7 +139,7 @@ enum TextCleanup {
                     let session = LanguageModelSession(instructions: instructions)
                     let response = try await session.respond(to: userMessage(text))
                     let cleaned = stripLeakedTags(response.content)
-                    return cleaned.isEmpty ? text : cleaned
+                    return validatedCleanedOutput(raw: text, cleaned: cleaned)
                 }
                 group.addTask {
                     try await Task.sleep(nanoseconds: 3_000_000_000)

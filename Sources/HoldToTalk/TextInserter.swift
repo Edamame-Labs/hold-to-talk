@@ -5,6 +5,7 @@ enum TextInserter {
     enum FailureReason {
         case secureInput
         case wrongTargetApp
+        case shellTargetNotConfirmed
 
         var userFacingError: String {
             switch self {
@@ -12,6 +13,8 @@ enum TextInserter {
                 return "Secure text input is active. Dictation is unavailable in password and other protected fields."
             case .wrongTargetApp:
                 return "Could not focus the app you were dictating into. Switch back to that app and try again."
+            case .shellTargetNotConfirmed:
+                return "Dictation into terminal apps requires confirmation before text is inserted."
             }
         }
     }
@@ -101,6 +104,20 @@ enum TextInserter {
         let profile = profile(for: bundleID)
         attempts.append("app=\(bundleID)")
         attempts.append("profile=\(profile.name)")
+        if Self.requiresShellTargetConfirmation(bundleID: bundleID) {
+            attempts.append("shellTarget=requiresConfirmation")
+            guard Self.confirmShellTargetInsertion(bundleID: bundleID) else {
+                attempts.append("blocked=shellTarget")
+                return InsertReport(
+                    success: false,
+                    confirmed: false,
+                    method: nil,
+                    attempts: attempts,
+                    failureReason: .shellTargetNotConfirmed
+                )
+            }
+            attempts.append("shellTarget=confirmed")
+        }
         attempts.append("PostEvent: \(checkPostEventAccess() ? "yes" : "no")")
         let secureInputActive = isSecureInputActive()
         attempts.append("secureInput=\(secureInputActive ? "on" : "off")")
@@ -173,6 +190,23 @@ enum TextInserter {
         }
 
         return (false, "targetApp=focusFailed")
+    }
+
+    static func requiresShellTargetConfirmation(bundleID: String?) -> Bool {
+        guard let bundleID else { return false }
+        return shellTargetBundleIDs.contains(bundleID)
+    }
+
+    private static func confirmShellTargetInsertion(bundleID: String) -> Bool {
+        let alert = NSAlert()
+        alert.alertStyle = .warning
+        alert.messageText = "Insert dictation into terminal?"
+        alert.informativeText = """
+        The focused app is a terminal-like app (\(bundleID)). Dictated text can execute as shell commands if it lands at a prompt.
+        """
+        alert.addButton(withTitle: "Insert")
+        alert.addButton(withTitle: "Cancel")
+        return alert.runModal() == .alertFirstButtonReturn
     }
 
     private static func run(
@@ -339,6 +373,7 @@ enum TextInserter {
 
     private static func insertViaClipboardPaste(_ text: String) -> Bool {
         let pasteboard = NSPasteboard.general
+        let originalChangeCount = pasteboard.changeCount
 
         // Fix #12: preserve ALL types from each item, not just the first
         let savedItems: [SavedItem] = pasteboard.pasteboardItems?.map { item in
@@ -351,6 +386,7 @@ enum TextInserter {
 
         pasteboard.clearContents()
         pasteboard.setString(text, forType: .string)
+        let insertionChangeCount = pasteboard.changeCount
 
         // Simulate CMD+V (virtual key 0x09 = 'v')
         guard let keyDown = CGEvent(keyboardEventSource: nil, virtualKey: 0x09, keyDown: true),
@@ -371,7 +407,11 @@ enum TextInserter {
             usleep(step)
             waited += step
         }
-        restoreClipboard(pasteboard, items: savedItems)
+        if pasteboard.changeCount == insertionChangeCount {
+            restoreClipboard(pasteboard, items: savedItems)
+        } else {
+            debugLog("[holdtotalk] Clipboard changed during paste insertion; leaving current clipboard untouched. originalChangeCount=\(originalChangeCount)")
+        }
         return true
     }
 
@@ -397,6 +437,19 @@ enum TextInserter {
         let keyCode: CGKeyCode
         let flags: CGEventFlags
     }
+
+    private static let shellTargetBundleIDs: Set<String> = [
+        "com.apple.Terminal",
+        "com.googlecode.iterm2",
+        "com.github.wez.wezterm",
+        "io.alacritty",
+        "net.kovidgoyal.kitty",
+        "com.mitchellh.ghostty",
+        "dev.warp.Warp-Stable",
+        "dev.warp.Warp-Preview",
+        "co.zeit.hyper",
+        "org.tabby",
+    ]
 
     /// Returns whether secure event input is active (e.g. password fields).
     /// Uses CGEventSource instead of dlopen(Carbon) so it works inside the App Store sandbox.

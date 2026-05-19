@@ -9,10 +9,12 @@ set -euo pipefail
 SHERPA_VERSION="1.12.35"
 ARCHIVE_NAME="sherpa-onnx-v${SHERPA_VERSION}-osx-universal2-static-lib.tar.bz2"
 DOWNLOAD_URL="https://github.com/k2-fsa/sherpa-onnx/releases/download/v${SHERPA_VERSION}/${ARCHIVE_NAME}"
+ARCHIVE_SHA256="59e539ec15abe0d6b1644da97a8d14342d755ed4cbf38170654bd245a6513bfb"
 
 # For the C API header (flat layout)
 HEADER_ARCHIVE_NAME="sherpa-onnx-v${SHERPA_VERSION}-macos-xcframework-static.tar.bz2"
 HEADER_DOWNLOAD_URL="https://github.com/k2-fsa/sherpa-onnx/releases/download/v${SHERPA_VERSION}/${HEADER_ARCHIVE_NAME}"
+HEADER_ARCHIVE_SHA256="1e4cc973b0ec133a393bbcba12b2b56273600236ba5a0a64983a0df15f320306"
 
 DEST_DIR="Frameworks/sherpa_onnx.xcframework"
 LIB_DIR="${DEST_DIR}/macos-arm64_x86_64"
@@ -32,11 +34,39 @@ fi
 TMPDIR_WORK="$(mktemp -d)"
 trap 'rm -rf "${TMPDIR_WORK}"' EXIT
 
+sha256_file() {
+    if command -v shasum >/dev/null 2>&1; then
+        shasum -a 256 "$1" | cut -d ' ' -f 1
+    elif command -v sha256sum >/dev/null 2>&1; then
+        sha256sum "$1" | cut -d ' ' -f 1
+    else
+        echo "Error: neither shasum nor sha256sum is available for integrity verification." >&2
+        exit 1
+    fi
+}
+
+verify_sha256() {
+    local file="$1"
+    local expected="$2"
+    local label="$3"
+    local actual
+    actual="$(sha256_file "${file}")"
+    if [[ "${actual}" != "${expected}" ]]; then
+        echo "Error: SHA-256 mismatch for ${label}" >&2
+        echo "  expected: ${expected}" >&2
+        echo "  actual:   ${actual}" >&2
+        exit 1
+    fi
+    echo "Verified ${label} SHA-256: ${actual}"
+}
+
 echo "Downloading sherpa-onnx v${SHERPA_VERSION} static libraries..."
 curl -fSL --progress-bar "${DOWNLOAD_URL}" -o "${TMPDIR_WORK}/${ARCHIVE_NAME}"
+verify_sha256 "${TMPDIR_WORK}/${ARCHIVE_NAME}" "${ARCHIVE_SHA256}" "${ARCHIVE_NAME}"
 
 echo "Downloading sherpa-onnx v${SHERPA_VERSION} headers..."
 curl -fSL --progress-bar "${HEADER_DOWNLOAD_URL}" -o "${TMPDIR_WORK}/${HEADER_ARCHIVE_NAME}"
+verify_sha256 "${TMPDIR_WORK}/${HEADER_ARCHIVE_NAME}" "${HEADER_ARCHIVE_SHA256}" "${HEADER_ARCHIVE_NAME}"
 
 echo "Extracting..."
 tar -xjf "${TMPDIR_WORK}/${ARCHIVE_NAME}" -C "${TMPDIR_WORK}"
