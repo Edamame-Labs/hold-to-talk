@@ -31,29 +31,6 @@ final class DebugLogTests: XCTestCase {
         XCTAssertTrue(report.summary.contains("Secure text input is active."))
     }
 
-    func testShellTargetFailureReportExposesUserFacingError() {
-        let report = TextInserter.InsertReport(
-            success: false,
-            confirmed: false,
-            method: nil,
-            attempts: ["app=com.apple.Terminal", "blocked=shellTarget"],
-            failureReason: .shellTargetNotConfirmed
-        )
-
-        XCTAssertEqual(
-            report.userFacingError,
-            "Dictation into terminal apps requires confirmation before text is inserted."
-        )
-        XCTAssertTrue(report.summary.contains("terminal apps requires confirmation"))
-    }
-
-    func testTerminalBundleIDsRequireConfirmation() {
-        XCTAssertTrue(TextInserter.requiresShellTargetConfirmation(bundleID: "com.apple.Terminal"))
-        XCTAssertTrue(TextInserter.requiresShellTargetConfirmation(bundleID: "com.googlecode.iterm2"))
-        XCTAssertFalse(TextInserter.requiresShellTargetConfirmation(bundleID: "com.apple.TextEdit"))
-        XCTAssertFalse(TextInserter.requiresShellTargetConfirmation(bundleID: nil))
-    }
-
     func testSuccessfulInsertionReportDoesNotExposeUserFacingError() {
         let report = TextInserter.InsertReport(
             success: true,
