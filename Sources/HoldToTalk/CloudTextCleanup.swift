@@ -2,6 +2,10 @@ import Foundation
 
 /// Text cleanup via OpenAI or Anthropic cloud APIs.
 enum CloudTextCleanup {
+    struct Result {
+        let text: String
+        let userFacingError: String?
+    }
 
     static func cleanup(
         _ text: String,
@@ -10,10 +14,10 @@ enum CloudTextCleanup {
         model: String,
         prompt: String,
         baseURL: String? = nil
-    ) async -> String {
+    ) async -> Result {
         guard !apiKey.isEmpty else {
             debugLog("[holdtotalk] Cloud cleanup skipped: no API key")
-            return text
+            return Result(text: text, userFacingError: "Cloud cleanup requires an API key. Add your key in Settings.")
         }
 
         do {
@@ -30,12 +34,15 @@ enum CloudTextCleanup {
                     baseURL: baseURL ?? "https://api.anthropic.com"
                 )
             case .appleIntelligence:
-                return text // not handled here
+                return Result(text: text, userFacingError: nil)
             }
-            return result.isEmpty ? text : result
+            let cleaned = result.isEmpty ? text : result
+            return Result(text: cleaned, userFacingError: nil)
         } catch {
             debugLog("[holdtotalk] Cloud cleanup failed: \(error)")
-            return text
+            let message = (error as? LocalizedError)?.errorDescription
+                ?? "Cloud text cleanup failed. Using the raw transcription."
+            return Result(text: text, userFacingError: message)
         }
     }
 

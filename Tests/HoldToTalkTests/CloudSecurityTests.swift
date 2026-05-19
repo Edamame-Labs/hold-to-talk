@@ -33,6 +33,17 @@ final class CloudSecurityTests: XCTestCase {
         )
     }
 
+    func testCloudTranscriberRejectsOverlongRecordings() {
+        XCTAssertThrowsError(
+            try CloudTranscriber.validateRecordingDuration(Double(CloudTranscriber.maxRecordingSeconds) + 1)
+        ) { error in
+            XCTAssertEqual(
+                error.localizedDescription,
+                CloudTranscriberError.recordingTooLong(maxSeconds: Int(CloudTranscriber.maxRecordingSeconds)).localizedDescription
+            )
+        }
+    }
+
     func testCloudErrorDescriptionsDoNotExposeProviderBody() {
         let transcriptionError = CloudTranscriberError.apiError(statusCode: 400).localizedDescription
         let cleanupError = CloudCleanupError.apiError(provider: "OpenAI", statusCode: 400).localizedDescription

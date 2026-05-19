@@ -55,7 +55,15 @@ actor Transcriber {
         guard recognizer == nil else { return }
 
         if let loadTask {
-            recognizer = try await loadTask.value
+            let loadedRecognizer = try await loadTask.value
+            if hotwords != currentHotwords {
+                self.loadTask = nil
+                recognizer = nil
+                hasCompletedDecodeWarmup = false
+                try await loadModel(numThreads: numThreads, hotwords: hotwords)
+                return
+            }
+            recognizer = loadedRecognizer
             return
         }
 
@@ -99,7 +107,6 @@ actor Transcriber {
         // and avoid transducer looping on very long audio.
         let segments = Self.extractSpeechSegments(normalized)
         let segInfo = segments.map { String(format: "%.1fs", Float($0.count) / 16000.0) }
-        NSLog("[holdtotalk] VAD produced %d segments: %@", segments.count, segInfo.description)
         debugLog("[holdtotalk] VAD produced \(segments.count) segments: \(segInfo)")
         guard !segments.isEmpty else { return "" }
 
@@ -130,13 +137,12 @@ actor Transcriber {
         let appResourcePath = Bundle.main.bundlePath + "/Contents/Resources/HoldToTalk_HoldToTalk.bundle/silero_vad.onnx"
         if FileManager.default.fileExists(atPath: appResourcePath) {
             vadModelPath = appResourcePath
-            NSLog("[holdtotalk] VAD model found via app Resources: %@", appResourcePath)
+            debugLog("[holdtotalk] VAD model found via app Resources: \(appResourcePath)")
         } else if let bundlePath = Bundle.module.url(forResource: "silero_vad", withExtension: "onnx")?.path {
             vadModelPath = bundlePath
-            NSLog("[holdtotalk] VAD model found via Bundle.module: %@", bundlePath)
+            debugLog("[holdtotalk] VAD model found via Bundle.module: \(bundlePath)")
         } else {
-            NSLog("[holdtotalk] WARNING: silero_vad.onnx not found. App path tried: %@",
-                  appResourcePath)
+            debugLog("[holdtotalk] WARNING: silero_vad.onnx not found. App path tried: \(appResourcePath)")
             return splitAtSilenceGaps(audio, sampleRate: sampleRate)
         }
 
@@ -159,7 +165,7 @@ actor Transcriber {
             config: &vadConfig,
             buffer_size_in_seconds: 120
         ) else {
-            NSLog("[holdtotalk] WARNING: Failed to create VAD. Falling back to silence-gap splitting.")
+            debugLog("[holdtotalk] WARNING: Failed to create VAD. Falling back to silence-gap splitting.")
             return splitAtSilenceGaps(audio, sampleRate: sampleRate)
         }
 
@@ -171,7 +177,13 @@ actor Transcriber {
             vad.acceptWaveform(samples: chunk)
             offset += windowSize
         }
-        // Flush any remaining audio
+        if offset < audio.count {
+            var tail = Array(audio[offset...])
+            if tail.count < windowSize {
+                tail.append(contentsOf: repeatElement(Float(0), count: windowSize - tail.count))
+            }
+            vad.acceptWaveform(samples: tail)
+        }
         vad.flush()
 
         // Collect all speech segments

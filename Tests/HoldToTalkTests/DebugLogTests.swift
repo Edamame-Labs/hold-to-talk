@@ -18,6 +18,7 @@ final class DebugLogTests: XCTestCase {
     func testSecureInputFailureReportExposesUserFacingError() {
         let report = TextInserter.InsertReport(
             success: false,
+            confirmed: false,
             method: nil,
             attempts: ["secureInput=on", "blocked=secureInput"],
             failureReason: .secureInput
@@ -28,5 +29,18 @@ final class DebugLogTests: XCTestCase {
             "Secure text input is active. Dictation is unavailable in password and other protected fields."
         )
         XCTAssertTrue(report.summary.contains("Secure text input is active."))
+    }
+
+    func testSuccessfulInsertionReportDoesNotExposeUserFacingError() {
+        let report = TextInserter.InsertReport(
+            success: true,
+            confirmed: true,
+            method: "unicodeChunked",
+            attempts: ["pass1:unicodeChunked=tentative"],
+            failureReason: nil
+        )
+
+        XCTAssertNil(report.userFacingError)
+        XCTAssertEqual(report.summary, "Inserted via unicodeChunked.")
     }
 }

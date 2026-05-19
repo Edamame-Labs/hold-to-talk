@@ -1,18 +1,35 @@
 import AVFoundation
 
+enum AudioRecorderError: LocalizedError {
+    case alreadyRecording
+
+    var errorDescription: String? {
+        switch self {
+        case .alreadyRecording:
+            return "Recording is already in progress."
+        }
+    }
+}
+
 /// Captures microphone audio into a 16 kHz mono float buffer for speech recognition.
 /// Thread-safe via NSLock; marked Sendable for cross-actor usage.
 ///
 /// The audio engine is pre-warmed on `prepare()` so that `start()` only installs
 /// a tap and resumes — cutting hotkey-to-recording latency from ~150ms to <10ms.
 final class AudioRecorder: @unchecked Sendable {
+    /// Maximum recording length before `onMaxDurationReached` fires (seconds).
+    static let maxRecordingSeconds = 300
+
     private let engine = AVAudioEngine()
     private var buffers: [AVAudioPCMBuffer] = []
     private let lock = NSLock()
     private var isPrepared = false
     private var tapInstalled = false
     private var smoothedLevel: Float = 0
+    private var capturedFrameCount = 0
+    private var didNotifyMaxDuration = false
     var levelHandler: (@Sendable (Float) -> Void)?
+    var onMaxDurationReached: (@Sendable () -> Void)?
 
     /// Pre-warms the audio engine so subsequent start() calls are near-instant.
     /// Call once at app startup. Safe to call multiple times.
@@ -28,14 +45,21 @@ final class AudioRecorder: @unchecked Sendable {
 
     func start() throws {
         lock.lock()
+        if tapInstalled {
+            lock.unlock()
+            throw AudioRecorderError.alreadyRecording
+        }
         buffers.removeAll()
         smoothedLevel = 0
+        capturedFrameCount = 0
+        didNotifyMaxDuration = false
         let levelHandler = self.levelHandler
         lock.unlock()
         levelHandler?(0)
 
         let input = engine.inputNode
         let nativeFormat = input.outputFormat(forBus: 0)
+        let maxFrames = Int(nativeFormat.sampleRate) * Self.maxRecordingSeconds
 
         input.installTap(onBus: 0, bufferSize: 4096, format: nativeFormat) { [weak self] buffer, _ in
             guard let self else { return }
@@ -44,13 +68,22 @@ final class AudioRecorder: @unchecked Sendable {
             let normalizedLevel = Self.normalizedLevel(for: copied)
             let callbackLevel: Float
             let handler: (@Sendable (Float) -> Void)?
+            let maxDurationHandler: (@Sendable () -> Void)?
             self.lock.lock()
             self.buffers.append(copied)
+            self.capturedFrameCount += Int(copied.frameLength)
+            let reachedMax = self.capturedFrameCount >= maxFrames
+            let shouldNotifyMax = reachedMax && !self.didNotifyMaxDuration
+            if shouldNotifyMax {
+                self.didNotifyMaxDuration = true
+            }
             self.smoothedLevel = max(normalizedLevel, self.smoothedLevel * 0.82)
             callbackLevel = self.smoothedLevel
             handler = self.levelHandler
+            maxDurationHandler = shouldNotifyMax ? self.onMaxDurationReached : nil
             self.lock.unlock()
             handler?(callbackLevel)
+            maxDurationHandler?()
         }
         tapInstalled = true
 
@@ -78,6 +111,8 @@ final class AudioRecorder: @unchecked Sendable {
         let captured = buffers
         buffers.removeAll()
         smoothedLevel = 0
+        capturedFrameCount = 0
+        didNotifyMaxDuration = false
         let levelHandler = self.levelHandler
         lock.unlock()
         levelHandler?(0)
@@ -147,7 +182,7 @@ final class AudioRecorder: @unchecked Sendable {
         }
 
         if let error {
-            print("[audio] resample error: \(error)")
+            debugLog("[audio] resample error: \(error)")
             Self.zeroBuffer(combined)
             Self.zeroBuffer(output)
             return []

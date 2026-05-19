@@ -82,11 +82,20 @@ final class DictationEngine: ObservableObject {
     private var activationObserver: NSObjectProtocol?
     private var transcriberWarmupTask: Task<Void, Never>?
     private var completedWarmup = false
+    private var dictationTask: Task<Void, Never>?
+    private var activeDictationID = 0
 
     init() {
         recorder.levelHandler = { [weak self] level in
             DispatchQueue.main.async {
                 self?.recordingLevel = level
+            }
+        }
+        recorder.onMaxDurationReached = { [weak self] in
+            DispatchQueue.main.async {
+                guard let self, self.state == .recording else { return }
+                self.lastError = "Maximum recording length reached (\(AudioRecorder.maxRecordingSeconds / 60) minutes)."
+                self.finishActiveRecording()
             }
         }
 
@@ -167,11 +176,14 @@ final class DictationEngine: ObservableObject {
         debugLog("[holdtotalk] Permissions Mic=\(hasMicrophone), PostEvent=\(hasPostEvent)")
 
         hotkeyManager.onPress = { [weak self] in
-            DispatchQueue.main.async { self?.beginRecording() }
+            DispatchQueue.main.async { self?.handleHotkeyPress() }
         }
         hotkeyManager.onRelease = { [weak self] in
+            DispatchQueue.main.async { self?.handleHotkeyRelease() }
+        }
+        hotkeyManager.onRegistrationFailure = { [weak self] message in
             DispatchQueue.main.async {
-                Task { await self?.endRecording() }
+                self?.lastError = message
             }
         }
         hotkeyManager.update(hotkey: resolvedHotkey)
@@ -191,6 +203,9 @@ final class DictationEngine: ObservableObject {
     }
 
     func stop() {
+        dictationTask?.cancel()
+        dictationTask = nil
+        cancelActiveRecording()
         hotkeyManager.stop()
         didStart = false
         axPollTask?.cancel()
@@ -244,16 +259,60 @@ final class DictationEngine: ObservableObject {
     }
 
     func reloadHotkey() {
+        if state == .recording {
+            cancelActiveRecording()
+        }
         hotkeyManager.update(hotkey: resolvedHotkey)
+        if let failure = hotkeyManager.lastRegistrationFailure {
+            lastError = failure
+        }
     }
 
     /// Invalidates the current transcriber so the next dictation recreates it with updated hotwords.
     func reloadTranscriber() {
+        transcriberWarmupTask?.cancel()
+        transcriberWarmupTask = nil
         transcriber = nil
         completedWarmup = false
     }
 
     // MARK: - Pipeline
+
+    private func handleHotkeyPress() {
+        if state == .transcribing {
+            dictationTask?.cancel()
+            dictationTask = nil
+            activeDictationID += 1
+            state = .idle
+            recordingLevel = 0
+            recordingTargetAppPID = nil
+            recordingTargetBundleID = nil
+            lastError = "Previous dictation cancelled."
+        }
+        beginRecording()
+    }
+
+    private func handleHotkeyRelease() {
+        finishActiveRecording()
+    }
+
+    private func finishActiveRecording() {
+        dictationTask?.cancel()
+        activeDictationID += 1
+        let taskID = activeDictationID
+        dictationTask = Task { [weak self] in
+            await self?.endRecording(taskID: taskID)
+        }
+    }
+
+    private func cancelActiveRecording() {
+        guard state == .recording else { return }
+        _ = recorder.stop()
+        state = .idle
+        recordingLevel = 0
+        recordingTargetAppPID = nil
+        recordingTargetBundleID = nil
+    }
 
     private func beginRecording() {
         debugLog("[holdtotalk] beginRecording called, state=\(state)")
@@ -284,15 +343,19 @@ final class DictationEngine: ObservableObject {
         }
     }
 
-    private func endRecording() async {
+    private func endRecording(taskID: Int) async {
+        guard taskID == activeDictationID else { return }
         guard state == .recording else { return }
-        let audio = recorder.stop()
+        var audio = recorder.stop()
         recordingLevel = 0
+        defer { zeroAudioSamples(&audio) }
+        guard !Task.isCancelled else {
+            completeDictationIfCurrent(taskID: taskID)
+            return
+        }
         guard !audio.isEmpty else {
-            state = .idle
             lastError = nil
-            recordingTargetAppPID = nil
-            recordingTargetBundleID = nil
+            completeDictationIfCurrent(taskID: taskID)
             return
         }
 
@@ -301,6 +364,7 @@ final class DictationEngine: ObservableObject {
 
         state = .transcribing
         do {
+            try Task.checkCancellation()
             // -- Transcription --
             let transcribeStart = Date()
             let raw: String
@@ -313,6 +377,8 @@ final class DictationEngine: ObservableObject {
                 let transcribeTime = Date().timeIntervalSince(transcribeStart)
                 debugLog("[holdtotalk] Transcribed \(String(format: "%.1f", duration))s audio in \(String(format: "%.2f", transcribeTime))s [\(profile.rawValue)]")
             case .openAI:
+                try CloudTranscriber.validateRecordingDuration(duration)
+                try Task.checkCancellation()
                 guard let apiKey = KeychainHelper.load(account: "openai"), !apiKey.isEmpty else {
                     UserDefaults.standard.set(false, forKey: openaiAPIKeySavedDefaultsKey)
                     throw CloudTranscriberError.noAPIKey
@@ -335,11 +401,11 @@ final class DictationEngine: ObservableObject {
                 debugLog("[holdtotalk] Cloud transcribed \(String(format: "%.1f", duration))s audio in \(String(format: "%.2f", transcribeTime))s [openai/\(model)]")
             }
 
+            try Task.checkCancellation()
+
             guard !raw.isEmpty else {
                 debugLog("[holdtotalk] (no speech detected)")
-                state = .idle
-                recordingTargetAppPID = nil
-                recordingTargetBundleID = nil
+                completeDictationIfCurrent(taskID: taskID)
                 return
             }
             lastError = nil
@@ -348,6 +414,7 @@ final class DictationEngine: ObservableObject {
 
             // -- Text Cleanup --
             let finalText: String
+            var cleanupWarning: String?
             if textCleanupEnabled {
                 // When using OpenAI transcription, cleanup instructions are
                 // already folded into the transcription prompt — skip the
@@ -368,13 +435,23 @@ final class DictationEngine: ObservableObject {
                         UserDefaults.standard.set(!apiKey.isEmpty, forKey: openaiAPIKeySavedDefaultsKey)
                         let model = openaiCleanupModel.isEmpty ? CleanupProvider.openAI.defaultModel : openaiCleanupModel
                         let baseURL = openaiBaseURL.isEmpty ? nil : openaiBaseURL
-                        cleaned = await CloudTextCleanup.cleanup(raw, provider: .openAI, apiKey: apiKey, model: model, prompt: textCleanupPrompt, baseURL: baseURL)
+                        let cleanupResult = await CloudTextCleanup.cleanup(
+                            raw, provider: .openAI, apiKey: apiKey, model: model,
+                            prompt: textCleanupPrompt, baseURL: baseURL
+                        )
+                        cleaned = cleanupResult.text
+                        cleanupWarning = cleanupResult.userFacingError
                     case .anthropic:
                         let apiKey = KeychainHelper.load(account: "anthropic") ?? ""
                         UserDefaults.standard.set(!apiKey.isEmpty, forKey: anthropicAPIKeySavedDefaultsKey)
                         let model = anthropicCleanupModel.isEmpty ? CleanupProvider.anthropic.defaultModel : anthropicCleanupModel
                         let baseURL = anthropicBaseURL.isEmpty ? nil : anthropicBaseURL
-                        cleaned = await CloudTextCleanup.cleanup(raw, provider: .anthropic, apiKey: apiKey, model: model, prompt: textCleanupPrompt, baseURL: baseURL)
+                        let cleanupResult = await CloudTextCleanup.cleanup(
+                            raw, provider: .anthropic, apiKey: apiKey, model: model,
+                            prompt: textCleanupPrompt, baseURL: baseURL
+                        )
+                        cleaned = cleanupResult.text
+                        cleanupWarning = cleanupResult.userFacingError
                     }
                     let cleanupTime = Date().timeIntervalSince(cleanupStart)
                     let changed = cleaned != raw
@@ -384,20 +461,35 @@ final class DictationEngine: ObservableObject {
             } else {
                 finalText = raw
             }
+
+            try Task.checkCancellation()
+            guard taskID == activeDictationID else { return }
             lastCleanText = finalText
+            if let cleanupWarning {
+                lastError = cleanupWarning
+            }
+
+            try Task.checkCancellation()
 
             reactivateRecordingTargetAppIfNeeded()
             try? await Task.sleep(nanoseconds: 80_000_000)
+            try Task.checkCancellation()
+            guard taskID == activeDictationID else { return }
             let insertText = finalText + " "
             let insertBundleID = recordingTargetBundleID
-            let report = await Task.detached(priority: .userInitiated) {
+            let insertPID = recordingTargetAppPID
+            let report = await MainActor.run {
                 TextInserter.insert(
                     insertText,
-                    targetBundleID: insertBundleID
+                    targetBundleID: insertBundleID,
+                    targetPID: insertPID
                 )
-            }.value
-            if report.success {
+            }
+            if report.success && report.confirmed {
                 lastInsertDebug = report.summary
+                if cleanupWarning == nil {
+                    lastError = nil
+                }
                 debugLog("[holdtotalk] Inserted via \(report.method ?? "unknown").")
             } else {
                 lastInsertDebug = report.summary
@@ -406,15 +498,27 @@ final class DictationEngine: ObservableObject {
                 }
                 debugLog("[holdtotalk] Insert unconfirmed. \(report.attempts.joined(separator: " | "))")
             }
+        } catch is CancellationError {
+            if taskID == activeDictationID {
+                debugLog("[holdtotalk] Dictation cancelled.")
+            }
         } catch {
-            lastError = error.localizedDescription
-            debugLog("[holdtotalk] Error: \(error)")
+            if taskID == activeDictationID {
+                lastError = error.localizedDescription
+                debugLog("[holdtotalk] Error: \(error)")
+            }
         }
 
+        completeDictationIfCurrent(taskID: taskID)
+    }
+
+    private func completeDictationIfCurrent(taskID: Int) {
+        guard taskID == activeDictationID else { return }
         state = .idle
         recordingLevel = 0
         recordingTargetAppPID = nil
         recordingTargetBundleID = nil
+        dictationTask = nil
     }
 
     private var resolvedHotkey: HotkeyManager.Hotkey {
@@ -425,7 +529,19 @@ final class DictationEngine: ObservableObject {
         if transcriber == nil {
             transcriber = Transcriber()
         }
-        return transcriber!
+        guard let transcriber else {
+            fatalError("Transcriber should exist after initialization")
+        }
+        return transcriber
+    }
+
+    private func zeroAudioSamples(_ audio: inout [Float]) {
+        guard !audio.isEmpty else { return }
+        audio.withUnsafeMutableBufferPointer { buffer in
+            guard let base = buffer.baseAddress else { return }
+            memset(base, 0, buffer.count * MemoryLayout<Float>.size)
+        }
+        audio.removeAll(keepingCapacity: false)
     }
 
     var resolvedTranscriptionProvider: TranscriptionProvider {
