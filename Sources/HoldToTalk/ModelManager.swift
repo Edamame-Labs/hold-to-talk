@@ -163,6 +163,94 @@ final class ModelManager: ObservableObject {
         }
     }
 
+    nonisolated static func validatedModelArchiveDestinations(
+        for entries: [String],
+        modelDirectory: URL,
+        expectedRoot: String = SpeechModelInfo.modelDirectoryName
+    ) throws -> [URL] {
+        let destinationRoot = modelDirectory.standardizedFileURL.path
+        let destinationPrefix = destinationRoot.hasSuffix("/") ? destinationRoot : destinationRoot + "/"
+        var destinations: [URL] = []
+
+        for entry in entries {
+            let trimmed = entry.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !trimmed.isEmpty else { continue }
+            guard !trimmed.hasPrefix("/") else {
+                throw ModelExtractionError.unsafeArchivePath(trimmed)
+            }
+
+            let components = trimmed
+                .split(separator: "/", omittingEmptySubsequences: true)
+                .map(String.init)
+
+            guard let root = components.first else { continue }
+            guard root == expectedRoot else {
+                throw ModelExtractionError.unexpectedArchiveRoot(root)
+            }
+            guard !components.contains("."), !components.contains("..") else {
+                throw ModelExtractionError.unsafeArchivePath(trimmed)
+            }
+
+            let strippedComponents = components.dropFirst()
+            guard !strippedComponents.isEmpty else { continue }
+
+            let destination = strippedComponents.reduce(modelDirectory) { partial, component in
+                partial.appendingPathComponent(component)
+            }.standardizedFileURL
+            let path = destination.path
+            guard path == destinationRoot || path.hasPrefix(destinationPrefix) else {
+                throw ModelExtractionError.unsafeArchivePath(trimmed)
+            }
+            destinations.append(destination)
+        }
+
+        guard !destinations.isEmpty else {
+            throw ModelExtractionError.emptyArchive
+        }
+        return destinations
+    }
+
+    nonisolated static func validateModelArchiveEntryTypes(_ details: [String]) throws {
+        for detail in details {
+            guard let type = detail.first else { continue }
+            guard type == "-" || type == "d" else {
+                throw ModelExtractionError.unsafeArchivePath(detail)
+            }
+        }
+    }
+
+    private nonisolated static func listArchiveEntries(_ archiveURL: URL) throws -> [String] {
+        let details = try runTar(arguments: ["-tvjf", archiveURL.path])
+        try validateModelArchiveEntryTypes(details)
+        return try runTar(arguments: ["-tjf", archiveURL.path])
+    }
+
+    private nonisolated static func runTar(arguments: [String]) throws -> [String] {
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/usr/bin/tar")
+        process.arguments = arguments
+
+        let outputPipe = Pipe()
+        let errorPipe = Pipe()
+        process.standardOutput = outputPipe
+        process.standardError = errorPipe
+
+        try process.run()
+        process.waitUntilExit()
+
+        guard process.terminationStatus == 0 else {
+            let data = errorPipe.fileHandleForReading.readDataToEndOfFile()
+            let message = String(data: data, encoding: .utf8) ?? "Unknown archive listing error"
+            throw ModelExtractionError.extractionFailed(message)
+        }
+
+        let data = outputPipe.fileHandleForReading.readDataToEndOfFile()
+        let output = String(data: data, encoding: .utf8) ?? ""
+        return output
+            .split(separator: "\n", omittingEmptySubsequences: true)
+            .map(String.init)
+    }
+
     private func downloadArchive() async throws -> URL {
         let (tempURL, _) = try await URLSession.shared.download(
             from: SpeechModelInfo.downloadURL,
@@ -179,13 +267,30 @@ final class ModelManager: ObservableObject {
         try await Task.detached(priority: .utility) {
             let fm = FileManager.default
             let destParent = Self.modelBase
+            let modelDirectory = destParent.appendingPathComponent(
+                SpeechModelInfo.modelDirectoryName,
+                isDirectory: true
+            )
 
             // Ensure destination parent exists
             try fm.createDirectory(at: destParent, withIntermediateDirectories: true)
+            let entries = try Self.listArchiveEntries(archiveURL)
+            _ = try Self.validatedModelArchiveDestinations(
+                for: entries,
+                modelDirectory: modelDirectory
+            )
+            if fm.fileExists(atPath: modelDirectory.path) {
+                try fm.removeItem(at: modelDirectory)
+            }
+            try fm.createDirectory(at: modelDirectory, withIntermediateDirectories: true)
 
             let process = Process()
             process.executableURL = URL(fileURLWithPath: "/usr/bin/tar")
-            process.arguments = ["-xjf", archiveURL.path, "-C", destParent.path]
+            process.arguments = [
+                "-xjf", archiveURL.path,
+                "--strip-components", "1",
+                "-C", modelDirectory.path,
+            ]
 
             let pipe = Pipe()
             process.standardError = pipe
@@ -243,6 +348,9 @@ final class ModelManager: ObservableObject {
 enum ModelExtractionError: LocalizedError {
     case extractionFailed(String)
     case checksumMismatch(expected: String, actual: String)
+    case emptyArchive
+    case unexpectedArchiveRoot(String)
+    case unsafeArchivePath(String)
 
     var errorDescription: String? {
         switch self {
@@ -250,6 +358,12 @@ enum ModelExtractionError: LocalizedError {
             return "Model extraction failed: \(message)"
         case .checksumMismatch(let expected, let actual):
             return "Model integrity check failed. Expected SHA-256 \(expected.prefix(12))..., got \(actual.prefix(12)).... The download may be corrupted or tampered with. Please try again."
+        case .emptyArchive:
+            return "Model archive integrity check failed: archive did not contain model files."
+        case .unexpectedArchiveRoot(let root):
+            return "Model archive integrity check failed: unexpected top-level path \(root)."
+        case .unsafeArchivePath(let path):
+            return "Model archive integrity check failed: unsafe path \(path)."
         }
     }
 }

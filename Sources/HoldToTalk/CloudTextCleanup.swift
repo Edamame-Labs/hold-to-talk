@@ -36,7 +36,7 @@ enum CloudTextCleanup {
             case .appleIntelligence:
                 return Result(text: text, userFacingError: nil)
             }
-            let cleaned = result.isEmpty ? text : result
+            let cleaned = TextCleanup.validatedCleanedOutput(raw: text, cleaned: result)
             return Result(text: cleaned, userFacingError: nil)
         } catch {
             debugLog("[holdtotalk] Cloud cleanup failed: \(error)")

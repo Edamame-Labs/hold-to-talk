@@ -339,6 +339,7 @@ enum TextInserter {
 
     private static func insertViaClipboardPaste(_ text: String) -> Bool {
         let pasteboard = NSPasteboard.general
+        let originalChangeCount = pasteboard.changeCount
 
         // Fix #12: preserve ALL types from each item, not just the first
         let savedItems: [SavedItem] = pasteboard.pasteboardItems?.map { item in
@@ -351,6 +352,7 @@ enum TextInserter {
 
         pasteboard.clearContents()
         pasteboard.setString(text, forType: .string)
+        let insertionChangeCount = pasteboard.changeCount
 
         // Simulate CMD+V (virtual key 0x09 = 'v')
         guard let keyDown = CGEvent(keyboardEventSource: nil, virtualKey: 0x09, keyDown: true),
@@ -371,7 +373,11 @@ enum TextInserter {
             usleep(step)
             waited += step
         }
-        restoreClipboard(pasteboard, items: savedItems)
+        if pasteboard.changeCount == insertionChangeCount {
+            restoreClipboard(pasteboard, items: savedItems)
+        } else {
+            debugLog("[holdtotalk] Clipboard changed during paste insertion; leaving current clipboard untouched. originalChangeCount=\(originalChangeCount)")
+        }
         return true
     }
 

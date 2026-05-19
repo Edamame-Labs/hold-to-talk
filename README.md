@@ -131,6 +131,7 @@ macOS will prompt for:
 ## Notes
 
 - Secure text fields (password inputs) are intentionally blocked.
+- Some browser and Electron targets use temporary clipboard paste for reliable insertion. Hold to Talk restores the previous clipboard when the paste completes and leaves the clipboard untouched if another app changes it during that window, but other local clipboard managers may still observe the transient dictated text.
 - Direct downloads support in-app updates via Sparkle. App Store builds use App Store distribution.
 
 ## Contributing
