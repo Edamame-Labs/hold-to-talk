@@ -99,7 +99,7 @@ The app requests these macOS permissions:
 
 - **Microphone** -- recording audio for transcription
 - **Accessibility** (Keyboard Access) -- inserting transcribed text into apps
-- **Input Monitoring** -- detecting the global hotkey in any app
+- **No explicit Input Monitoring request** -- regular shortcuts are registered with macOS; modifier-only shortcuts use Accessibility-trusted modifier-state events
 
 These permissions are managed by macOS and can be revoked at any time in System Settings.
 

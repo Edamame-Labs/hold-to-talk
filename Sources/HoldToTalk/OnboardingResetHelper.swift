@@ -62,9 +62,9 @@ func onboardingLaunchPreparation(
         if storedPath == currentPath { return .none }
 
         // App was moved or updated. If all permissions are still granted
-        // and the model is present, just update the stored path and skip
-        // onboarding entirely.
-        if allPermissionsGrantedAndModelReady() {
+        // and the selected transcription provider is ready, just update the
+        // stored path and skip onboarding entirely.
+        if completedOnboardingEnvironmentReady(defaults: defaults) {
             defaults.set(currentPath, forKey: onboardingCompletedAppPathDefaultsKey)
             return .none
         }
@@ -158,10 +158,19 @@ func resetPersistedAppStateForFreshOnboarding(
     }
 }
 
-private func allPermissionsGrantedAndModelReady() -> Bool {
+func completedOnboardingEnvironmentReady(defaults: UserDefaults = .standard) -> Bool {
     guard checkPostEventAccess() else { return false }
     guard AVCaptureDevice.authorizationStatus(for: .audio) == .authorized else { return false }
-    return ModelManager.isModelDownloaded
+    if completedOnboardingRequiresLocalModel(defaults: defaults) {
+        return ModelManager.isModelDownloaded
+    }
+    return true
+}
+
+func completedOnboardingRequiresLocalModel(defaults: UserDefaults = .standard) -> Bool {
+    let providerRawValue = defaults.string(forKey: transcriptionProviderDefaultsKey)
+        ?? TranscriptionProvider.local.rawValue
+    return (TranscriptionProvider(rawValue: providerRawValue) ?? .local) == .local
 }
 
 private func normalizedAppBundlePath(_ appURL: URL) -> String {

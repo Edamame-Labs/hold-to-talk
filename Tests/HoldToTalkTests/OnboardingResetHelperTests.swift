@@ -122,6 +122,19 @@ final class OnboardingResetHelperTests: XCTestCase {
         XCTAssertEqual(defaults.string(forKey: onboardingCompletedAppPathDefaultsKey), appURL.path)
     }
 
+    func testCompletedOnboardingRequiresLocalModelOnlyForLocalTranscription() {
+        let defaults = UserDefaults(suiteName: #function)!
+        defer { defaults.removePersistentDomain(forName: #function) }
+
+        XCTAssertTrue(completedOnboardingRequiresLocalModel(defaults: defaults))
+
+        defaults.set(TranscriptionProvider.openAI.rawValue, forKey: transcriptionProviderDefaultsKey)
+        XCTAssertFalse(completedOnboardingRequiresLocalModel(defaults: defaults))
+
+        defaults.set("unknown", forKey: transcriptionProviderDefaultsKey)
+        XCTAssertTrue(completedOnboardingRequiresLocalModel(defaults: defaults))
+    }
+
     func testResetPersistedAppStateClearsDefaultsAndAppDataButKeepsAppSupportRoot() throws {
         let fileManager = FileManager.default
         let root = try makeTemporaryDirectory()

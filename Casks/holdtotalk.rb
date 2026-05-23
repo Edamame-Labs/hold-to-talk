@@ -2,12 +2,12 @@ cask "holdtotalk" do
   version "TMPL_VERSION"
   sha256 "TMPL_SHA256"
 
-  url "https://github.com/jxucoder/holdtotalk/releases/download/v#{version}/HoldToTalk-v#{version}.zip"
+  url "https://github.com/jxucoder/hold-to-talk/releases/download/v#{version}/HoldToTalk-v#{version}.zip"
   name "Hold to Talk"
   desc "Free, open-source voice dictation for macOS"
-  homepage "https://github.com/jxucoder/holdtotalk"
+  homepage "https://github.com/jxucoder/hold-to-talk"
 
-  depends_on macos: ">= :sonoma"
+  depends_on macos: ">= :sequoia"
 
   app "Hold To Talk.app"
 

@@ -297,6 +297,7 @@ final class DictationEngine: ObservableObject {
     }
 
     private func finishActiveRecording() {
+        guard state == .recording else { return }
         dictationTask?.cancel()
         activeDictationID += 1
         let taskID = activeDictationID
@@ -386,16 +387,8 @@ final class DictationEngine: ObservableObject {
                 UserDefaults.standard.set(true, forKey: openaiAPIKeySavedDefaultsKey)
                 let model = openaiTranscriptionModel.isEmpty ? "gpt-4o-mini-transcribe" : openaiTranscriptionModel
                 let baseURL = openaiBaseURL.isEmpty ? "https://api.openai.com/v1" : openaiBaseURL
-                // Fold cleanup instructions into the transcription prompt for
-                // gpt-4o-transcribe models so we get clean output in a single
-                // round-trip instead of two sequential API calls.
-                let transcriptionPrompt: String? = textCleanupEnabled
-                    ? (textCleanupPrompt.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-                        ? TextCleanup.defaultPrompt : textCleanupPrompt)
-                    : nil
                 raw = try await CloudTranscriber.transcribe(
-                    audio: audio, apiKey: apiKey, model: model, baseURL: baseURL,
-                    prompt: transcriptionPrompt
+                    audio: audio, apiKey: apiKey, model: model, baseURL: baseURL
                 )
                 let transcribeTime = Date().timeIntervalSince(transcribeStart)
                 debugLog("[holdtotalk] Cloud transcribed \(String(format: "%.1f", duration))s audio in \(String(format: "%.2f", transcribeTime))s [openai/\(model)]")
@@ -416,48 +409,38 @@ final class DictationEngine: ObservableObject {
             let finalText: String
             var cleanupWarning: String?
             if textCleanupEnabled {
-                // When using OpenAI transcription, cleanup instructions are
-                // already folded into the transcription prompt — skip the
-                // separate cleanup round-trip to cut latency in half.
-                let cloudTranscriptionHandledCleanup = resolvedTranscriptionProvider == .openAI
-
-                if cloudTranscriptionHandledCleanup {
-                    debugLog("[holdtotalk] Cleanup folded into cloud transcription prompt (0 extra latency)")
-                    finalText = raw
-                } else {
-                    let cleanupStart = Date()
-                    let cleaned: String
-                    switch resolvedCleanupProvider {
-                    case .appleIntelligence:
-                        cleaned = await TextCleanup.cleanup(raw, prompt: textCleanupPrompt)
-                    case .openAI:
-                        let apiKey = KeychainHelper.load(account: "openai") ?? ""
-                        UserDefaults.standard.set(!apiKey.isEmpty, forKey: openaiAPIKeySavedDefaultsKey)
-                        let model = openaiCleanupModel.isEmpty ? CleanupProvider.openAI.defaultModel : openaiCleanupModel
-                        let baseURL = openaiBaseURL.isEmpty ? nil : openaiBaseURL
-                        let cleanupResult = await CloudTextCleanup.cleanup(
-                            raw, provider: .openAI, apiKey: apiKey, model: model,
-                            prompt: textCleanupPrompt, baseURL: baseURL
-                        )
-                        cleaned = cleanupResult.text
-                        cleanupWarning = cleanupResult.userFacingError
-                    case .anthropic:
-                        let apiKey = KeychainHelper.load(account: "anthropic") ?? ""
-                        UserDefaults.standard.set(!apiKey.isEmpty, forKey: anthropicAPIKeySavedDefaultsKey)
-                        let model = anthropicCleanupModel.isEmpty ? CleanupProvider.anthropic.defaultModel : anthropicCleanupModel
-                        let baseURL = anthropicBaseURL.isEmpty ? nil : anthropicBaseURL
-                        let cleanupResult = await CloudTextCleanup.cleanup(
-                            raw, provider: .anthropic, apiKey: apiKey, model: model,
-                            prompt: textCleanupPrompt, baseURL: baseURL
-                        )
-                        cleaned = cleanupResult.text
-                        cleanupWarning = cleanupResult.userFacingError
-                    }
-                    let cleanupTime = Date().timeIntervalSince(cleanupStart)
-                    let changed = cleaned != raw
-                    debugLog("[holdtotalk] Text cleanup \(changed ? "modified" : "unchanged") in \(String(format: "%.2f", cleanupTime))s [\(resolvedCleanupProvider.rawValue)]")
-                    finalText = cleaned
+                let cleanupStart = Date()
+                let cleaned: String
+                switch resolvedCleanupProvider {
+                case .appleIntelligence:
+                    cleaned = await TextCleanup.cleanup(raw, prompt: textCleanupPrompt)
+                case .openAI:
+                    let apiKey = KeychainHelper.load(account: "openai") ?? ""
+                    UserDefaults.standard.set(!apiKey.isEmpty, forKey: openaiAPIKeySavedDefaultsKey)
+                    let model = openaiCleanupModel.isEmpty ? CleanupProvider.openAI.defaultModel : openaiCleanupModel
+                    let baseURL = openaiBaseURL.isEmpty ? nil : openaiBaseURL
+                    let cleanupResult = await CloudTextCleanup.cleanup(
+                        raw, provider: .openAI, apiKey: apiKey, model: model,
+                        prompt: textCleanupPrompt, baseURL: baseURL
+                    )
+                    cleaned = cleanupResult.text
+                    cleanupWarning = cleanupResult.userFacingError
+                case .anthropic:
+                    let apiKey = KeychainHelper.load(account: "anthropic") ?? ""
+                    UserDefaults.standard.set(!apiKey.isEmpty, forKey: anthropicAPIKeySavedDefaultsKey)
+                    let model = anthropicCleanupModel.isEmpty ? CleanupProvider.anthropic.defaultModel : anthropicCleanupModel
+                    let baseURL = anthropicBaseURL.isEmpty ? nil : anthropicBaseURL
+                    let cleanupResult = await CloudTextCleanup.cleanup(
+                        raw, provider: .anthropic, apiKey: apiKey, model: model,
+                        prompt: textCleanupPrompt, baseURL: baseURL
+                    )
+                    cleaned = cleanupResult.text
+                    cleanupWarning = cleanupResult.userFacingError
                 }
+                let cleanupTime = Date().timeIntervalSince(cleanupStart)
+                let changed = cleaned != raw
+                debugLog("[holdtotalk] Text cleanup \(changed ? "modified" : "unchanged") in \(String(format: "%.2f", cleanupTime))s [\(resolvedCleanupProvider.rawValue)]")
+                finalText = cleaned
             } else {
                 finalText = raw
             }
