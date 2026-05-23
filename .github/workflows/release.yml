@@ -132,7 +132,7 @@ jobs:
           <rss version="2.0" xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle" xmlns:dc="http://purl.org/dc/elements/1.1/">
             <channel>
               <title>Hold to Talk</title>
-              <link>https://jxucoder.github.io/holdtotalk/appcast.xml</link>
+              <link>https://holdtotalk.ai/appcast.xml</link>
               <item>
                 <title>Version ${VERSION}</title>
                 <pubDate>${PUBDATE}</pubDate>

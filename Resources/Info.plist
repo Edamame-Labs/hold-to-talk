@@ -13,9 +13,9 @@
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
-	<string>2.1.2</string>
+	<string>2.1.3</string>
 	<key>CFBundleVersion</key>
-	<string>2.1.2</string>
+	<string>2.1.3</string>
 	<key>LSApplicationCategoryType</key>
 	<string>public.app-category.utilities</string>
 	<key>LSMinimumSystemVersion</key>
@@ -25,7 +25,7 @@
 	<key>NSMicrophoneUsageDescription</key>
 	<string>Hold to Talk needs microphone access for voice dictation.</string>
 	<key>SUFeedURL</key>
-	<string>https://jxucoder.github.io/holdtotalk/appcast.xml</string>
+	<string>https://holdtotalk.ai/appcast.xml</string>
 	<key>SUPublicEDKey</key>
 	<string>eczek52R8fP7R9tcDWhOy9FG7NNObkSpxqDyqxfWj50=</string>
 </dict>
