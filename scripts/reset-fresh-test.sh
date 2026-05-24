@@ -16,6 +16,7 @@ Usage: scripts/reset-fresh-test.sh [--yes] [--permissions-only]
 Preferred shortcut from the repo root:
   make permissions-reset   # reset macOS TCC permissions only
   make test-reset
+  make fresh-install       # uninstall, reset permissions/state, rebuild, reinstall
   make uninstall
 
 Removes Hold To Talk.app and app-specific local state so you can test from a clean slate:

@@ -1,4 +1,4 @@
-.PHONY: setup build install verify package package-zip package-dmg package-permission-test-dmg \
+.PHONY: setup build install fresh-install verify package package-zip package-dmg package-permission-test-dmg \
  notarize notarize-app notarize-dmg release permissions-reset reset-fresh-test test-reset uninstall run clean
 
 APP_NAME := HoldToTalk
@@ -78,6 +78,10 @@ install: build
 	@cp -R "$(APP_BUNDLE)" "$(APP_INSTALL_DIR)/"
 	@xattr -dr com.apple.quarantine "$(APP_INSTALL_DIR)/$(APP_DISPLAY_NAME).app" 2>/dev/null || true
 	@echo "Installed to $(APP_INSTALL_DIR)/$(APP_DISPLAY_NAME).app"
+
+fresh-install:
+	@APP_USER="$(APP_USER)" bash scripts/reset-fresh-test.sh --yes
+	@$(MAKE) install
 
 verify: build
 	@codesign --verify --deep --strict --verbose=2 "$(APP_BUNDLE)"

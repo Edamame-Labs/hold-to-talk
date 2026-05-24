@@ -1,0 +1,4 @@
+interface:
+  display_name: "Hold to Talk Developer"
+  short_description: "Develop, test, and release Hold to Talk"
+  default_prompt: "Use $hold-to-talk-developer to make and verify a Hold to Talk repo change."
