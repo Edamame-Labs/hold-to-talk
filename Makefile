@@ -120,7 +120,7 @@ notarize-app: _check-direct-distribution build _check-signing _check-notary
 		--team-id "$(APPLE_TEAM_ID)" \
 		--password "$(APPLE_APP_PASSWORD)" \
 		--wait
-	@xcrun stapler staple "$(APP_BUNDLE)"
+	@bash scripts/staple-with-retry.sh "$(APP_BUNDLE)"
 	@rm -f "$(NOTARY_TMP_ZIP)"
 	@echo "Notarized and stapled $(APP_BUNDLE)"
 
@@ -130,7 +130,7 @@ notarize-dmg: _check-direct-distribution package-dmg _check-signing _check-notar
 		--team-id "$(APPLE_TEAM_ID)" \
 		--password "$(APPLE_APP_PASSWORD)" \
 		--wait
-	@xcrun stapler staple "$(DMG_PATH)"
+	@bash scripts/staple-with-retry.sh "$(DMG_PATH)"
 	@echo "Notarized and stapled $(DMG_PATH)"
 
 release: _check-direct-distribution notarize-app package-zip package-dmg notarize-dmg
