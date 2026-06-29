@@ -124,7 +124,7 @@ defaults write com.holdtotalk.app openaiCleanupModel -string "gpt-4o-mini"
 
 | Method | Best for |
 |--------|----------|
-| Homebrew (`brew install jxucoder/tap/holdtotalk`) | Developer teams |
+| Homebrew (`brew install edamame-labs/tap/holdtotalk`) | Developer teams |
 | DMG via internal file share or MDM | Managed fleets |
 | Build from source | Security review, custom builds |
 

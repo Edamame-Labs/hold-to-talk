@@ -56,7 +56,7 @@ The workflow:
 
 ```bash
 gh release view vX.Y.Z --json tagName,url,isDraft,isPrerelease,publishedAt,assets
-gh api repos/jxucoder/homebrew-tap/contents/Casks/holdtotalk.rb --jq '.content' | base64 --decode
+gh api repos/Edamame-Labs/homebrew-tap/contents/Casks/holdtotalk.rb --jq '.content' | base64 --decode
 git fetch origin main --tags
 git pull --ff-only origin main
 curl -fsSL 'https://holdtotalk.ai/appcast.xml?release-check=X.Y.Z'

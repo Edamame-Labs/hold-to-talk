@@ -158,7 +158,7 @@ struct SettingsView: View {
 
             Spacer()
 
-            Link(destination: URL(string: "https://github.com/jxucoder/hold-to-talk")!) {
+            Link(destination: URL(string: "https://github.com/Edamame-Labs/hold-to-talk")!) {
                 Image(systemName: "star")
             }
             Link(destination: URL(string: "https://buymeacoffee.com/jerryxu")!) {

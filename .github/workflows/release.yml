@@ -96,7 +96,7 @@ jobs:
           ZIP_PATH="dist/HoldToTalk-v${VERSION}.zip"
           SHA256=$(shasum -a 256 "$ZIP_PATH" | awk '{print $1}')
 
-          git clone https://x-access-token:${TAP_GITHUB_TOKEN}@github.com/jxucoder/homebrew-tap.git /tmp/homebrew-tap
+          git clone https://x-access-token:${TAP_GITHUB_TOKEN}@github.com/Edamame-Labs/homebrew-tap.git /tmp/homebrew-tap
           mkdir -p /tmp/homebrew-tap/Casks
 
           sed "s/TMPL_VERSION/$VERSION/g; s/TMPL_SHA256/$SHA256/g" Casks/holdtotalk.rb > /tmp/homebrew-tap/Casks/holdtotalk.rb
@@ -120,7 +120,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           ZIP_PATH="dist/HoldToTalk-v${VERSION}.zip"
-          DOWNLOAD_URL="https://github.com/jxucoder/hold-to-talk/releases/download/${RELEASE_TAG}/HoldToTalk-v${VERSION}.zip"
+          DOWNLOAD_URL="https://github.com/Edamame-Labs/hold-to-talk/releases/download/${RELEASE_TAG}/HoldToTalk-v${VERSION}.zip"
           SIGN_UPDATE="$RUNNER_TEMP/sparkle/bin/sign_update"
 
           LENGTH=$(stat -f%z "$ZIP_PATH")

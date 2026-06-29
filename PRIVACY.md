@@ -125,4 +125,4 @@ If this policy changes, the updated version will be posted on the website and in
 
 If you have privacy questions, open an issue at:
 
-`https://github.com/jxucoder/hold-to-talk/issues`
+`https://github.com/Edamame-Labs/hold-to-talk/issues`

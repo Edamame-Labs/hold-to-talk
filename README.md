@@ -7,15 +7,15 @@
 <p align="center">Free, open-source voice dictation for Apple Silicon Macs. Hold a key, speak, release -- your words appear wherever your cursor is. Local by default, with optional cloud using your own key.</p>
 
 <p align="center">
-  <a href="https://jxucoder.github.io/hold-to-talk/demo.mp4">
+  <a href="https://holdtotalk.ai/demo.mp4">
     <img src="Resources/demo.gif" width="680" alt="Hold to Talk demo">
   </a>
 </p>
 
 <p align="center">
-  <a href="https://jxucoder.github.io/hold-to-talk/">Website</a>
+  <a href="https://holdtotalk.ai/">Website</a>
   ·
-  <a href="https://jxucoder.github.io/hold-to-talk/demo.mp4">Watch the demo video</a>
+  <a href="https://holdtotalk.ai/demo.mp4">Watch the demo video</a>
 </p>
 
 - **Free and open-source** -- no subscription, no paywall. Inspect the code, build it yourself, or install a signed release.
@@ -34,12 +34,12 @@
 
 ### Download
 
-Grab the latest notarized `DMG` or `ZIP` from [GitHub Releases](https://github.com/jxucoder/hold-to-talk/releases), install into `/Applications`, and open.
+Grab the latest notarized `DMG` or `ZIP` from [GitHub Releases](https://github.com/Edamame-Labs/hold-to-talk/releases), install into `/Applications`, and open.
 
 ### Homebrew
 
 ```bash
-brew install jxucoder/tap/holdtotalk
+brew install edamame-labs/tap/holdtotalk
 ```
 
 ### First launch
@@ -55,7 +55,7 @@ On first launch, Hold to Talk guides you through:
 Requires Xcode command line tools.
 
 ```bash
-git clone https://github.com/jxucoder/hold-to-talk.git
+git clone https://github.com/Edamame-Labs/hold-to-talk.git
 cd hold-to-talk
 make build          # downloads sherpa-onnx, builds release, assembles .app
 make install        # copies to /Applications

@@ -9,7 +9,7 @@
       <sparkle:version>2.1.5</sparkle:version>
       <sparkle:shortVersionString>2.1.5</sparkle:shortVersionString>
       <sparkle:minimumSystemVersion>15.0</sparkle:minimumSystemVersion>
-      <enclosure url="https://github.com/jxucoder/hold-to-talk/releases/download/v2.1.5/HoldToTalk-v2.1.5.zip" length="10759964" type="application/octet-stream" sparkle:edSignature="Zod0p41WgIATdFKK+twltusqBIHQLJDzLg4BYO1+WWvDJzsXu1IRoJqKu72R9y/DqLjoaQ/ifUJvrjrEYVwhDQ==" />
+      <enclosure url="https://github.com/Edamame-Labs/hold-to-talk/releases/download/v2.1.5/HoldToTalk-v2.1.5.zip" length="10759964" type="application/octet-stream" sparkle:edSignature="Zod0p41WgIATdFKK+twltusqBIHQLJDzLg4BYO1+WWvDJzsXu1IRoJqKu72R9y/DqLjoaQ/ifUJvrjrEYVwhDQ==" />
     </item>
   </channel>
 </rss>
