@@ -7,7 +7,6 @@ DerivedData/
 # Swift
 .build/
 .swiftpm/
-Package.resolved
 *.o
 *.swp
 
@@ -28,3 +27,5 @@ Frameworks/
 attic/
 .claude/
 demo-video/
+/test_data/
+evaluation/test_data/

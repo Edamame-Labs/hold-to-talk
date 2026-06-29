@@ -70,12 +70,26 @@ APPLESCRIPT_FILE="${WORK_DIR}/style-dmg.applescript"
 DMG_DEVICE=""
 
 cleanup() {
-  if [[ -n "${DMG_DEVICE}" ]]; then
-    hdiutil detach "${DMG_DEVICE}" -quiet >/dev/null 2>&1 || true
-  fi
+  detach_dmg >/dev/null 2>&1 || true
   rm -rf "${WORK_DIR}"
 }
 trap cleanup EXIT
+
+detach_dmg() {
+  [[ -n "${DMG_DEVICE}" ]] || return 0
+
+  local attempt
+  for attempt in 1 2 3 4 5; do
+    if hdiutil detach "${DMG_DEVICE}" -quiet >/dev/null 2>&1; then
+      DMG_DEVICE=""
+      return 0
+    fi
+    sleep 1
+  done
+
+  hdiutil detach -force "${DMG_DEVICE}" -quiet >/dev/null
+  DMG_DEVICE=""
+}
 
 ds_store_has_custom_layout() {
   local ds_store_path="$1"
@@ -88,10 +102,6 @@ ds_store_has_custom_layout() {
 
 mkdir -p "${STAGING_DIR}" "${BACKGROUND_DIR}" "$(dirname "${OUTPUT_DMG}")"
 cp -R "${APP_BUNDLE}" "${STAGING_DIR}/"
-
-if [[ ! -f "${BACKGROUND_TEXTURE}" ]]; then
-  BACKGROUND_TEXTURE="${REPO_ROOT}/Resources/dmg-background.jpeg"
-fi
 
 CLANG_MODULE_CACHE_PATH="${TMPDIR:-/tmp}/holdtotalk-clang-cache" \
 SWIFT_MODULE_CACHE_PATH="${TMPDIR:-/tmp}/holdtotalk-swift-cache" \
@@ -165,8 +175,12 @@ on run argv
 
       tell container window
         set current view to icon view
-        set toolbar visible to false
-        set statusbar visible to false
+        try
+          set toolbar visible to false
+        end try
+        try
+          set statusbar visible to false
+        end try
         set bounds to {theXOrigin, theYOrigin, theBottomRightX, theBottomRightY}
       end tell
 
@@ -210,6 +224,10 @@ on run argv
       end if
       set waitTime to waitTime + 1
     end repeat
+
+    try
+      tell disk volumeName to close container window
+    end try
   end tell
 end run
 EOF
@@ -251,8 +269,7 @@ chmod -Rf go-w "${MOUNT_DIR}" >/dev/null 2>&1 || true
 bless --folder "${MOUNT_DIR}" --openfolder "${MOUNT_DIR}" >/dev/null 2>&1 || true
 sync
 
-hdiutil detach "${DMG_DEVICE}" -quiet >/dev/null
-DMG_DEVICE=""
+detach_dmg
 
 hdiutil convert "${RW_DMG}" \
   -format UDZO \

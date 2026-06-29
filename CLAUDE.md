@@ -198,10 +198,9 @@ swift build --target TranscribeCmd
 python3 evaluation/evaluate.py record -n 5
 python3 evaluation/evaluate.py retest
 python3 evaluation/evaluate.py report
-python3 evaluation/test_accuracy.py
 ```
 
-`evaluation/evaluate.py` records through `ffmpeg` and writes local `test_data/` artifacts. Do not commit those artifacts.
+`evaluation/evaluate.py` records through `ffmpeg` and writes local `evaluation/test_data/` artifacts. Do not commit those artifacts.
 
 ## CI And Release Workflow
 

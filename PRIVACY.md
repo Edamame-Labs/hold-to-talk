@@ -7,7 +7,7 @@ This privacy policy covers the Hold to Talk macOS app and the Hold to Talk websi
 ## Summary
 
 - The **app** keeps all dictation data on your Mac by default. If you opt in to cloud transcription or cleanup, audio or text is sent directly to the provider you choose (OpenAI or Anthropic) using your own API key. Hold to Talk never proxies, stores, or has access to your data.
-- The **website** uses Google Analytics to understand traffic.
+- The **website** uses Google Analytics to understand traffic and page usage.
 - Hold to Talk does **not** sell personal data or use advertising trackers inside the app.
 
 ## Hold to Talk app
@@ -27,8 +27,11 @@ Both projects are published by established research teams, hosted on GitHub and 
 You can optionally enable cloud-powered transcription (OpenAI) or text cleanup (OpenAI, Anthropic) by providing your own API key in Settings. When cloud features are enabled:
 
 - Audio or transcription text is sent **directly from your Mac to the provider** (e.g., `api.openai.com` or `api.anthropic.com`). Hold to Talk does not operate any proxy or relay server.
-- Your API key is stored in the **macOS Keychain**, not in plain text or in Hold to Talk preferences.
+- Your API key is stored in the **macOS Keychain for this Mac only**, not in plain text, iCloud Keychain, or Hold to Talk preferences.
+- Custom cloud base URLs must use **HTTPS** and cannot include embedded credentials, query strings, or fragments.
+- Cloud requests use an ephemeral network session with no cookies and no disk cache for audio or transcript traffic.
 - Hold to Talk **never sees, collects, or stores** your API key, audio, or transcription text. The connection is between your Mac and the provider.
+- Provider error response bodies are not shown or written to diagnostics because they can contain request details.
 - The provider's own privacy policy and data retention rules apply. Consult their documentation for details.
 
 Cloud features are **off by default**. If you do not add an API key, the app operates entirely on-device.
@@ -107,8 +110,9 @@ These permissions are managed by macOS and can be revoked at any time in System 
 
 | Service | Role | Their privacy policy |
 |---|---|---|
-| GitHub | Source code, release hosting, model download | [github.com/site/privacy](https://docs.github.com/en/site-policy/privacy-policies/github-general-privacy-statement) |
+| GitHub | Source code, website hosting, release hosting, model download | [github.com/site/privacy](https://docs.github.com/en/site-policy/privacy-policies/github-general-privacy-statement) |
 | Google Analytics | Website traffic analytics | [policies.google.com/privacy](https://policies.google.com/privacy) |
+| Hugging Face / NVIDIA | Speech model publication and documentation | [huggingface.co/privacy](https://huggingface.co/privacy) |
 | Sparkle | Direct-download update delivery | [sparkle-project.org](https://sparkle-project.org) |
 | OpenAI | Cloud transcription and/or text cleanup (opt-in, BYO key) | [openai.com/privacy](https://openai.com/privacy) |
 | Anthropic | Cloud text cleanup (opt-in, BYO key) | [anthropic.com/privacy](https://www.anthropic.com/privacy) |

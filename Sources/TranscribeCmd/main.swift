@@ -71,7 +71,10 @@ func createRecognizer(numThreads: Int = 4) -> SherpaOnnxOfflineRecognizer {
         modelConfig: modelConfig,
         blankPenalty: 2.0
     )
-    return SherpaOnnxOfflineRecognizer(config: &config)
+    guard let recognizer = SherpaOnnxOfflineRecognizer(config: &config) else {
+        fatalError("Failed to create SherpaOnnxOfflineRecognizer")
+    }
+    return recognizer
 }
 
 // MARK: - Audio Preprocessing (mirrors Transcriber.swift exactly)
@@ -202,10 +205,17 @@ func extractSpeechSegments(_ audio: [Float], sampleRate: Int = 16000, useVAD: Bo
         provider: "cpu"
     )
 
-    let vad = SherpaOnnxVoiceActivityDetectorWrapper(
+    guard let vad = SherpaOnnxVoiceActivityDetectorWrapper(
         config: &vadConfig,
         buffer_size_in_seconds: 120
-    )
+    ) else {
+        fputs("[warning] Failed to create VAD. Falling back to silence-based splitting.\n", stderr)
+        let trimmed = trimSilence(audio, sampleRate: sampleRate)
+        if !trimmed.isEmpty {
+            return splitAtSilenceGaps(trimmed, sampleRate: sampleRate)
+        }
+        return [audio]
+    }
 
     let windowSize = 512
     var offset = 0

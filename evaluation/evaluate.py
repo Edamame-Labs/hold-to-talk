@@ -11,9 +11,9 @@ Modes:
   report   - Show results from the last run
 
 Usage:
-  python3 scripts/evaluate.py record [-n 5]     # record first 5 sentences
-  python3 scripts/evaluate.py retest             # re-run transcription on saved audio
-  python3 scripts/evaluate.py report             # show last results
+  python3 evaluation/evaluate.py record [-n 5]   # record first 5 sentences
+  python3 evaluation/evaluate.py retest          # re-run transcription on saved audio
+  python3 evaluation/evaluate.py report          # show last results
 """
 
 import json
@@ -25,10 +25,10 @@ import time
 from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
-TEST_DIR = PROJECT_ROOT / "test_data"
+EVALUATION_DIR = Path(__file__).resolve().parent
+TEST_DIR = EVALUATION_DIR / "test_data"
 REFS_FILE = TEST_DIR / "refs.txt"
 RESULTS_FILE = TEST_DIR / "results.json"
-TRANSCRIBE_CMD = PROJECT_ROOT / ".build" / "arm64-apple-macosx" / "debug" / "TranscribeCmd"
 
 SENTENCES = [
     "The quick brown fox jumps over the lazy dog.",
@@ -243,7 +243,7 @@ def do_retest(verbose=False):
 
     wav_files = sorted(TEST_DIR.glob("sentence_*.wav"))
     if not wav_files:
-        print("No audio files found in test_data/. Run 'record' first.", file=sys.stderr)
+        print("No audio files found in evaluation/test_data/. Run 'record' first.", file=sys.stderr)
         sys.exit(1)
 
     results = []
@@ -344,12 +344,12 @@ def save_results(results):
         json.dump(results, f, indent=2)
     print(f"\nResults saved to {RESULTS_FILE}")
     print(f"\nTo re-test after code changes:")
-    print(f"  python3 scripts/evaluate.py retest")
+    print(f"  python3 evaluation/evaluate.py retest")
 
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
-        print("Usage: python3 scripts/evaluate.py <record|retest|report> [-v] [-n NUM]")
+        print("Usage: python3 evaluation/evaluate.py <record|retest|report> [-v] [-n NUM]")
         sys.exit(1)
 
     mode = sys.argv[1]
@@ -367,5 +367,5 @@ if __name__ == "__main__":
         do_report()
     else:
         print(f"Unknown mode: {mode}")
-        print("Usage: python3 scripts/evaluate.py <record|retest|report> [-v] [-n NUM]")
+        print("Usage: python3 evaluation/evaluate.py <record|retest|report> [-v] [-n NUM]")
         sys.exit(1)

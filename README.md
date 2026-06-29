@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="Resources/logo.png" width="128" alt="Hold To Talk logo">
+  <img src="docs/logo.png" width="128" alt="Hold To Talk logo">
 </p>
 
 <h1 align="center">Hold To Talk</h1>

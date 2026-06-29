@@ -231,7 +231,7 @@
     </section>
 
     <article class="policy">
-      <p><strong>Effective date:</strong> March 8, 2026</p>
+      <p><strong>Effective date:</strong> April 5, 2026</p>
       <p>This privacy policy covers the Hold to Talk macOS app and the Hold to Talk website at <code>holdtotalk.ai</code>.</p>
 
       <div class="summary">
@@ -244,20 +244,20 @@
 
       <h2>Hold to Talk App</h2>
 
-      <h3>What the app does with your data</h3>
-      <p>Hold to Talk records microphone audio only while you hold the dictation hotkey. By default, speech recognition runs locally on your Mac using on-device models. Audio and transcribed text are not sent to Hold to Talk servers.</p>
+      <h3>How speech recognition works</h3>
+      <p>By default, Hold to Talk uses two open-source projects for on-device speech recognition: NVIDIA Parakeet TDT 0.6B for the speech model and sherpa-onnx for the local inference runtime. Hold to Talk downloads the int8-quantized model on first launch. Once downloaded, the model runs entirely on your Mac with no network calls.</p>
 
-      <h3>Cloud features (bring your own key)</h3>
-      <p>Hold to Talk requires Apple Silicon and uses local transcription by default. You can optionally enable cloud transcription or cleanup with your own OpenAI-compatible key. When cloud features are enabled:</p>
+      <h3>Optional cloud transcription and cleanup (bring your own key)</h3>
+      <p>You can optionally enable cloud-powered transcription or text cleanup by providing your own API key in Settings. When cloud features are enabled:</p>
       <ul>
-        <li>Audio or transcription text is sent <strong>directly from your Mac to the provider</strong> (e.g., api.openai.com or api.anthropic.com). Hold to Talk does not operate any proxy or relay server.</li>
+        <li>Audio or transcription text is sent <strong>directly from your Mac to the provider</strong> (for example, api.openai.com or api.anthropic.com). Hold to Talk does not operate any proxy or relay server.</li>
         <li>Your API key is stored in the <strong>macOS Keychain for this Mac only</strong>, not in plain text or iCloud Keychain.</li>
         <li>Cloud base URLs must use <strong>HTTPS</strong> and cannot include embedded credentials, query strings, or fragments.</li>
         <li>Cloud requests use an ephemeral network session with no cookies and no disk cache for audio or transcript traffic.</li>
         <li>Hold to Talk <strong>never sees, collects, or stores</strong> your API key, audio, or transcription text.</li>
         <li>The provider's own privacy policy and data retention rules apply.</li>
       </ul>
-      <p>Cloud features are <strong>off by default</strong>.</p>
+      <p>Cloud features are <strong>off by default</strong>. If you do not add an API key, the app operates entirely on-device.</p>
 
       <h3>Audio</h3>
       <ul>
@@ -277,12 +277,12 @@
       </ul>
 
       <h3>Local storage</h3>
-      <p>Hold to Talk stores app data on your Mac, including preferences such as hotkey choice, selected model, cleanup settings, downloaded speech models, temporary app state needed for onboarding and operation, and optional local diagnostic logs only if you enable them for troubleshooting.</p>
-      <p>Hold to Talk does not intentionally store audio recordings or a server-side transcript history.</p>
+      <p>Hold to Talk stores preferences, the downloaded Parakeet TDT speech model, temporary app state for onboarding and operation, and optional local diagnostic logs only if you enable them.</p>
+      <p>Hold to Talk does not store audio recordings or a server-side transcript history.</p>
 
       <h3>Network activity from the app</h3>
-      <p>The app may make limited network requests for product delivery features, including downloading speech models from supported model hosts such as Hugging Face and checking for direct-release app updates through Sparkle when using the non-App-Store version.</p>
-      <p>If you enable cloud transcription or cleanup, the app also makes requests to the provider's API (e.g., api.openai.com, api.anthropic.com) using your own API key. These requests go directly to the provider -- Hold to Talk does not relay or log them. Provider error response bodies are not shown or written to diagnostics because they can contain request details.</p>
+      <p>The app makes limited network requests for product delivery features, including downloading the speech model from GitHub releases and checking for direct-release app updates through Sparkle when using the non-App-Store version.</p>
+      <p>If you enable cloud transcription or cleanup, the app also makes requests to the provider's API using your own API key. These requests go directly to the provider -- Hold to Talk does not relay or log them. Provider error response bodies are not shown or written to diagnostics because they can contain request details.</p>
 
       <h3>App analytics and tracking</h3>
       <p>Hold to Talk does not include in-app advertising, third-party analytics SDKs, or app telemetry that tracks what you dictate.</p>
@@ -308,9 +308,9 @@
       <h2>Third Parties</h2>
       <p>Depending on how you use Hold to Talk, third-party services may be involved:</p>
       <ul>
-        <li><strong>Google Analytics</strong> for website traffic analytics</li>
         <li><strong>GitHub</strong> for website hosting, source code, and release downloads</li>
-        <li><strong>Hugging Face</strong> for speech model downloads</li>
+        <li><strong>Google Analytics</strong> for website traffic analytics</li>
+        <li><strong>Hugging Face / NVIDIA</strong> for speech model publication and documentation</li>
         <li><strong>Sparkle</strong> for direct-release update delivery</li>
         <li><strong>OpenAI</strong> for cloud transcription and/or text cleanup (opt-in, bring your own key)</li>
         <li><strong>Anthropic</strong> for cloud text cleanup (opt-in, bring your own key)</li>
