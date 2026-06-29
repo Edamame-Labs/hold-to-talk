@@ -1,0 +1,80 @@
+name: Appcast
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version to generate appcast for (e.g. 2.1.6)"
+        required: true
+
+jobs:
+  appcast:
+    runs-on: macos-26
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Resolve release metadata
+        run: |
+          VERSION="${{ inputs.version }}"
+          RELEASE_TAG="v${{ inputs.version }}"
+
+          echo "VERSION=${VERSION}" >> "$GITHUB_ENV"
+          echo "RELEASE_TAG=${RELEASE_TAG}" >> "$GITHUB_ENV"
+
+      - name: Download release ZIP
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/release"
+          gh release download "$RELEASE_TAG" \
+            --repo Edamame-Labs/hold-to-talk \
+            --pattern "HoldToTalk-v${VERSION}.zip" \
+            --dir "$RUNNER_TEMP/release" \
+            --clobber
+          echo "ZIP_PATH=$RUNNER_TEMP/release/HoldToTalk-v${VERSION}.zip" >> "$GITHUB_ENV"
+
+      - name: Download Sparkle tools
+        run: |
+          curl -sL "https://github.com/sparkle-project/Sparkle/releases/download/2.9.0/Sparkle-2.9.0.tar.xz" -o "$RUNNER_TEMP/sparkle.tar.xz"
+          mkdir -p "$RUNNER_TEMP/sparkle"
+          tar -xf "$RUNNER_TEMP/sparkle.tar.xz" -C "$RUNNER_TEMP/sparkle"
+
+      - name: Generate Sparkle appcast
+        env:
+          SPARKLE_PRIVATE_KEY: ${{ secrets.SPARKLE_PRIVATE_KEY }}
+        run: |
+          DOWNLOAD_URL="https://github.com/Edamame-Labs/hold-to-talk/releases/download/${RELEASE_TAG}/HoldToTalk-v${VERSION}.zip"
+          SIGN_UPDATE="$RUNNER_TEMP/sparkle/bin/sign_update"
+
+          LENGTH=$(stat -f%z "$ZIP_PATH")
+          SIG_ATTR=$(echo "$SPARKLE_PRIVATE_KEY" | "$SIGN_UPDATE" "$ZIP_PATH" --ed-key-file - | grep -o 'sparkle:edSignature="[^"]*"')
+          PUBDATE=$(date -R)
+
+          cat > docs/appcast.xml <<EOF
+          <?xml version="1.0" encoding="utf-8"?>
+          <rss version="2.0" xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle" xmlns:dc="http://purl.org/dc/elements/1.1/">
+            <channel>
+              <title>Hold to Talk</title>
+              <link>https://holdtotalk.ai/appcast.xml</link>
+              <item>
+                <title>Version ${VERSION}</title>
+                <pubDate>${PUBDATE}</pubDate>
+                <sparkle:version>${VERSION}</sparkle:version>
+                <sparkle:shortVersionString>${VERSION}</sparkle:shortVersionString>
+                <sparkle:minimumSystemVersion>15.0</sparkle:minimumSystemVersion>
+                <enclosure url="${DOWNLOAD_URL}" length="${LENGTH}" type="application/octet-stream" ${SIG_ATTR} />
+              </item>
+            </channel>
+          </rss>
+          EOF
+
+          plutil -replace CFBundleVersion -string "$VERSION" Resources/Info.plist
+          plutil -replace CFBundleShortVersionString -string "$VERSION" Resources/Info.plist
+
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add Resources/Info.plist docs/appcast.xml
+          git commit -m "Update release metadata for ${RELEASE_TAG}" || true
+          git push origin main
