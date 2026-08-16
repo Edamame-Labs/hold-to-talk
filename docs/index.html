@@ -1376,7 +1376,6 @@
     </a>
     <div class="nav-links">
       <a href="#features">Features</a>
-      <a href="#security">Security</a>
       <a href="#teams">Teams</a>
       <a href="#how">How it works</a>
       <a href="#faq">FAQ</a>
@@ -1525,7 +1524,7 @@
       </div>
 
     </div>
-    <p class="modes-note reveal">Mix and match in Settings — local transcription with cloud cleanup, or the reverse. Custom HTTPS base URLs work with proxies and Azure OpenAI.</p>
+    <p class="modes-note reveal">Mix and match in Settings — local transcription with cloud cleanup, or the reverse. Diagnostic logging is off by default and redacts transcripts in both modes.</p>
   </div>
 </section>
 
@@ -1547,14 +1546,6 @@
       </div>
 
       <div class="feature-card glass spot reveal" style="--d:0.06s">
-        <div class="icon-wrap">
-          <i data-lucide="hard-drive"></i>
-        </div>
-        <h3>Local by default</h3>
-        <p>Apple Silicon runs Parakeet locally with no account or tracking. Cloud transcription is optional and uses your own API key.</p>
-      </div>
-
-      <div class="feature-card glass spot reveal" style="--d:0.12s">
         <div class="icon-wrap">
           <i data-lucide="zap"></i>
         </div>
@@ -1584,51 +1575,6 @@
         </div>
         <h3>Install your way</h3>
         <p>Download directly, install via Homebrew, or build from source. Your workflow, your choice.</p>
-      </div>
-
-    </div>
-  </div>
-</section>
-
-<section class="features" id="security">
-  <div class="container">
-    <div class="section-heading reveal">
-      <div class="eyebrow">Security</div>
-      <h2>Locked down by design</h2>
-      <p>Cloud features are opt-in and hardened for direct provider connections.</p>
-    </div>
-    <div class="features-grid security-grid">
-
-      <div class="feature-card glass spot reveal" style="--d:0s">
-        <div class="icon-wrap">
-          <i data-lucide="key"></i>
-        </div>
-        <h3>This-Mac-only keys</h3>
-        <p>OpenAI and Anthropic keys are stored in the macOS Keychain for this Mac only, not in plain text or iCloud Keychain.</p>
-      </div>
-
-      <div class="feature-card glass spot reveal" style="--d:0.06s">
-        <div class="icon-wrap">
-          <i data-lucide="shield-check"></i>
-        </div>
-        <h3>HTTPS-only cloud</h3>
-        <p>Cloud base URLs must use HTTPS and cannot include embedded credentials, query strings, or fragments.</p>
-      </div>
-
-      <div class="feature-card glass spot reveal" style="--d:0.12s">
-        <div class="icon-wrap">
-          <i data-lucide="server-off"></i>
-        </div>
-        <h3>No cloud cache</h3>
-        <p>Cloud requests use an ephemeral session with no cookies and no disk cache for audio or transcript traffic.</p>
-      </div>
-
-      <div class="feature-card glass spot reveal" style="--d:0.18s">
-        <div class="icon-wrap">
-          <i data-lucide="eye-off"></i>
-        </div>
-        <h3>Redacted diagnostics</h3>
-        <p>Diagnostic logs are off by default, local only, and redact transcript content when troubleshooting is enabled.</p>
       </div>
 
     </div>
