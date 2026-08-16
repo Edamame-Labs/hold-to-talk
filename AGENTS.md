@@ -1,90 +1,60 @@
 # AGENTS.md
 
-This file is for AI/code agents working in this repository. Keep changes grounded in the current SwiftPM app structure; this is not an Xcode-project repo.
+Instructions for AI/code agents working in this repository.
 
-## Project Overview
+## What this is
 
-Hold To Talk is a macOS hold-to-talk dictation app. The user holds a configured hotkey, speaks, releases, and the app transcribes the recording, optionally cleans up the text, then inserts it into the previously active app.
+Hold To Talk: a macOS hold-to-talk dictation app. Hold a hotkey, speak, release — the recording is transcribed, optionally cleaned up, and inserted into the previously active app.
 
-Core product constraints:
+Hard constraints:
 
-- macOS 15+ and Apple Silicon are required for the app experience.
-- Local transcription is the default. Cloud features are opt-in and use the user's own provider keys.
-- There are no Hold To Talk servers. Provider requests go directly from the app to OpenAI-compatible or Anthropic endpoints.
-- Privacy-sensitive data must stay out of diagnostics. Transcript text is redacted in logs.
+- **SwiftPM package. No `.xcodeproj` or `.xcworkspace` — never add one.**
+- macOS 15+ and Apple Silicon only.
+- Local transcription is the default. Cloud is opt-in with the user's own provider keys; requests go directly from the app to OpenAI-compatible or Anthropic endpoints. There are no Hold To Talk servers.
+- Privacy-sensitive data stays out of diagnostics: transcript text is redacted in logs, API keys live only in Keychain.
 
-## Tech Stack
-
-- SwiftPM package, no `.xcodeproj` or `.xcworkspace`.
-- `swift-tools-version: 6.0` with target `swiftLanguageMode(.v5)`.
-- SwiftUI/AppKit app target: `Sources/HoldToTalk`.
-- CLI transcription harness target: `Sources/TranscribeCmd`.
-- Tests: `Tests/HoldToTalkTests`, using both XCTest and Swift Testing.
-- Local ASR: sherpa-onnx binary target from `Frameworks/sherpa_onnx.xcframework`.
-- Speech model: NVIDIA Parakeet TDT 0.6B v2 int8, downloaded at runtime into Application Support.
-- VAD: `Sources/HoldToTalk/Resources/silero_vad.onnx`, copied by SwiftPM via `Bundle.module`.
-- Updates: Sparkle for direct-distribution builds only. `APP_STORE=1` excludes Sparkle.
-- Demo video: Remotion project under `demo-video/` and generated media in `demo-video/out/` and `docs/`.
-
-## Important Paths
-
-```text
-Package.swift SwiftPM targets, Sparkle conditional dependency
-Makefile Local build, app assembly, signing, packaging, reset helpers
-Sources/HoldToTalk/ Main macOS app
-Sources/HoldToTalk/Resources/ SwiftPM-copied runtime resources
-Sources/TranscribeCmd/ CLI tool for transcription experiments/evaluation
-Tests/HoldToTalkTests/ Unit tests for security, onboarding, compatibility, insertion, ASR helpers
-Resources/ App bundle resources, entitlements, Info.plist, icons, privacy manifest
-scripts/setup-sherpa-onnx.sh Downloads/prepares sherpa-onnx xcframework
-scripts/reset-fresh-test.sh Removes installs/state and resets permissions
-scripts/package-dmg.sh Direct-distribution DMG packaging
-evaluation/ Manual WER/evaluation helpers
-docs/ GitHub Pages site, appcast, privacy page, enterprise docs
-Casks/holdtotalk.rb Template used by release workflow for Homebrew tap
-.github/workflows/ CI, direct release, App Store upload
-```
-
-Generated or local-only paths are ignored by git: `.build/`, `Frameworks/`, `.Codex/`, `demo-video/`, `dist/`, app bundles, `.DS_Store`.
-
-## Commands
+## Setup and daily commands
 
 ```bash
-make setup # Download sherpa-onnx xcframework into Frameworks/
-swift build # Debug SwiftPM build; setup must already have run
-swift build -c release # Release SwiftPM build
-swift test # Run all tests
-
-make build # Release build + assemble .build/Hold To Talk.app
-make run # Debug build + assemble .app + open it
-make install # Build and copy to /Applications
-make verify # Build, codesign verify, and spctl if not ad-hoc signed
-make package # Direct-distribution zip + dmg; requires APP_STORE != 1
-make release # Sign, notarize app, package zip/dmg, notarize dmg
-make clean # swift package clean + remove app/dist/staging artifacts
-
-make test-reset # Kill app, remove installs/data, reset permissions
-make reset-fresh-test # Same script, configurable via ARGS
-make permissions-reset # Reset TCC permissions only
-tccutil reset Microphone com.holdtotalk.app
-tccutil reset Accessibility com.holdtotalk.app
-tccutil reset ListenEvent com.holdtotalk.app
+make setup    # one-time: download sherpa-onnx xcframework into Frameworks/ (required before any build)
+swift build   # debug build
+swift test    # full test suite — run before handing off any non-docs change
+make run      # debug .app bundle + launch; enables debug onboarding controls (e.g. Skip Permissions)
+make build    # release build + assemble .build/Hold To Talk.app
 ```
 
-Debug-only launch flags:
+Less common: `make install` (copy to `/Applications`), `make verify` (codesign/spctl check), `make package` (direct-distribution zip+dmg), `make release` (sign, notarize, package), `make clean`.
+
+Debug-only launch flags (combinable):
 
 ```bash
-swift run HoldToTalk -- --reset-onboarding
-swift run HoldToTalk -- --onboarding-step 2
-swift run HoldToTalk -- --skip-permissions
 swift run HoldToTalk -- --reset-onboarding --onboarding-step 3 --skip-permissions
 ```
 
-`make run` creates a debug app bundle, so debug onboarding controls such as Skip Permissions are available there.
+## Repo map
+
+```text
+Package.swift                  SwiftPM targets, Sparkle conditional dependency
+Makefile                       Build, app assembly, signing, packaging, reset helpers
+Sources/HoldToTalk/            Main macOS app (SwiftUI/AppKit)
+Sources/HoldToTalk/Resources/  SwiftPM-copied runtime resources (silero_vad.onnx)
+Sources/TranscribeCmd/         CLI tool for transcription experiments/evaluation
+Tests/HoldToTalkTests/         Unit tests (XCTest + Swift Testing)
+Resources/                     App bundle resources, entitlements, Info.plist, icons, privacy manifest
+scripts/setup-sherpa-onnx.sh   Downloads/prepares sherpa-onnx xcframework
+scripts/reset-fresh-test.sh    Removes installs/state and resets permissions
+scripts/package-dmg.sh         Direct-distribution DMG packaging
+evaluation/                    Manual WER/evaluation helpers
+docs/                          GitHub Pages site (holdtotalk.ai), appcast, privacy page, enterprise docs
+Casks/holdtotalk.rb            Template used by release workflow for Homebrew tap
+.github/workflows/             CI, direct release, App Store upload
+```
+
+Never commit: `.build/`, `Frameworks/`, `dist/`, app bundles, `demo-video/` dependencies/output, `evaluation/test_data/` artifacts, `.DS_Store`.
 
 ## Architecture
 
-The main dictation path is:
+Main dictation path:
 
 ```text
 HotkeyManager
@@ -98,11 +68,11 @@ HotkeyManager
  -> target app
 ```
 
-Responsibilities:
+File responsibilities:
 
 - `HoldToTalkApp.swift`: app scene, menu bar status, onboarding/settings windows, install prompt, launch-at-login migration, Sparkle wiring.
 - `DictationEngine.swift`: main `@MainActor` pipeline state machine (`idle -> recording -> transcribing -> idle`), permission snapshots, hotkey lifecycle, transcriber warmup.
-- `HotkeyManager.swift`: Carbon hotkeys for regular shortcuts and AppKit modifier monitoring for bare modifier keys.
+- `HotkeyManager.swift`: Carbon hotkeys for regular shortcuts; AppKit modifier monitoring for bare modifier keys.
 - `AudioRecorder.swift`: AVAudioEngine capture, level callback, resampling to 16 kHz mono, buffer zeroing after use.
 - `Transcriber.swift`: local sherpa-onnx recognizer, Silero VAD segmentation, silence trimming, normalization, repeated-phrase cleanup, profile selection, hotwords.
 - `CloudTranscriber.swift`: OpenAI-compatible `/audio/transcriptions` request using user key and configurable HTTPS base URL.
@@ -118,44 +88,45 @@ Responsibilities:
 - `DebugLog.swift`: local diagnostic logging with transcript redaction and 1 MB truncation.
 - `KeychainHelper.swift`: API key storage under service `com.holdtotalk.apikeys`, accounts `openai` and `anthropic`.
 
-## Build Variants
+Tech notes: `swift-tools-version: 6.0` with `swiftLanguageMode(.v5)`. Local ASR is sherpa-onnx (`Frameworks/sherpa_onnx.xcframework`) running NVIDIA Parakeet TDT 0.6B v2 int8, downloaded at runtime into Application Support. Sparkle ships in direct-distribution builds only; `APP_STORE=1` excludes it.
 
-| Command | Build | Entitlements | Sparkle | Signing |
-| --- | --- | --- | --- | --- |
-| `make run` | Debug app bundle | `Resources/HoldToTalk.dev.entitlements` | Yes | Ad-hoc (`-`) |
-| `make build` | Release app bundle | `Resources/HoldToTalk.dev.entitlements` | Yes | Ad-hoc (`-`) |
-| `SIGNING_IDENTITY="..." make build` | Release app bundle | `Resources/HoldToTalk.direct.entitlements` | Yes | Developer ID |
-| `APP_STORE=1 make build` | Release app bundle | `Resources/HoldToTalk.entitlements` | No | App Store-style bundle assembly |
+## Build variants
 
-Direct distribution uses Sparkle appcast metadata in `docs/appcast.xml`. App Store workflow strips Sparkle keys from `Info.plist`, embeds a provisioning profile, signs with App Store entitlements, packages a `.pkg`, and uploads with `xcrun altool`.
+| Command | Entitlements | Sparkle | Signing |
+| --- | --- | --- | --- |
+| `make run` / `make build` | `Resources/HoldToTalk.dev.entitlements` | Yes | Ad-hoc (`-`) |
+| `SIGNING_IDENTITY="..." make build` | `Resources/HoldToTalk.direct.entitlements` | Yes | Developer ID |
+| `APP_STORE=1 make build` | `Resources/HoldToTalk.entitlements` | No | App Store-style assembly |
 
-## State, Storage, And Privacy
+Direct distribution uses Sparkle appcast metadata in `docs/appcast.xml`. The App Store workflow strips Sparkle keys from `Info.plist`, embeds a provisioning profile, signs with App Store entitlements, packages a `.pkg`, and uploads with `xcrun altool`.
 
-- UserDefaults keys live as top-level constants in `OnboardingResetHelper.swift`. Add new keys there.
-- API keys must remain in Keychain via `KeychainHelper`; do not store secrets in UserDefaults, logs, files, or crash text.
-- Cloud base URLs must be validated with `normalizedCloudBaseURL` before credentials/audio/text are sent.
-- Cloud traffic uses `cloudSession`, an ephemeral `URLSession` with cookies and disk cache disabled.
-- Diagnostic logging is off by default. Use `debugLogSensitive(_:text:)` for transcript-like content.
-- `AudioRecorder.stop()` zeroes captured buffers after resampling.
-- Secure text fields are intentionally blocked by `TextInserter`; preserve that behavior.
-- Runtime model data is under `~/Library/Application Support/HoldToTalk/models`.
-- Debug log path is `~/Library/Application Support/HoldToTalk/debug.log`.
+## Guardrails — do not break these
 
-## Testing And Evaluation
+- API keys only via `KeychainHelper`. Never UserDefaults, logs, files, or crash text.
+- Cloud base URLs must be validated with `normalizedCloudBaseURL` before credentials, audio, or text are sent.
+- Cloud traffic uses `cloudSession` (ephemeral `URLSession`, cookies and disk cache disabled) — no shared session.
+- Diagnostic logging is off by default. Transcript-like content goes through `debugLogSensitive(_:text:)` only.
+- `AudioRecorder.stop()` zeroes captured buffers after resampling — preserve.
+- `TextInserter` intentionally blocks secure text fields — preserve.
+- New UserDefaults keys go in `OnboardingResetHelper.swift` as top-level constants.
+- Runtime paths: models in `~/Library/Application Support/HoldToTalk/models`, debug log at `~/Library/Application Support/HoldToTalk/debug.log`.
+- Keep privacy/security tests updated when touching cloud providers, URL validation, key handling, logging, or text insertion.
 
-Run `swift test` before handing off code changes unless the change is docs-only or the environment cannot build macOS targets.
+## Coding conventions
 
-Current test coverage includes:
+- Prefer existing SwiftUI/AppKit patterns over new abstractions; keep UI native and compact (utility app, not a marketing surface).
+- `@MainActor` for UI and `DictationEngine` state. Keep recognition/download/extraction off the main actor.
+- `Transcriber` is an `actor` — preserve isolation around recognizer/model access.
+- `AudioRecorder` is `@unchecked Sendable` guarded by `NSLock` — keep tap callbacks nonblocking.
+- Avoid force unwraps except hardcoded URL literals and the documented Application Support lookups already in the codebase.
+- Model/provider failures: failable initialization and user-facing errors, not crashes.
+- Resource access: app-bundle resource paths first, then `Bundle.module` fallback (`.app` layout differs from raw `swift run`).
 
-- app install/copy/relaunch helpers
-- cloud base URL validation and safe cloud error text
-- diagnostic log redaction and secure-input user-facing errors
-- onboarding reset/resume behavior
-- speech model metadata
-- repeated phrase deduplication, silence trimming, segmentation, normalization
-- system compatibility and permission helper logic
+## Testing and evaluation
 
-Manual/local evaluation tools:
+`swift test` covers: install/copy/relaunch helpers, cloud URL validation and safe cloud error text, log redaction and secure-input errors, onboarding reset/resume, speech model metadata, phrase dedup/silence trimming/segmentation/normalization, compatibility and permission helpers.
+
+Manual WER evaluation (records via `ffmpeg`, writes git-ignored `evaluation/test_data/`):
 
 ```bash
 swift build --target TranscribeCmd
@@ -164,34 +135,20 @@ python3 evaluation/evaluate.py retest
 python3 evaluation/evaluate.py report
 ```
 
-`evaluation/evaluate.py` records through `ffmpeg` and writes local `evaluation/test_data/` artifacts. Do not commit those artifacts.
+## CI and release
 
-## CI And Release Workflow
+- `.github/workflows/build.yml`: push/PR to `main` — setup, `swift test`, `APP_STORE=1 make build`, direct `make build`.
+- `.github/workflows/release.yml`: tag/workflow direct release — tests, version stamp, Developer ID cert import, `make release`, GitHub Release artifacts, Homebrew tap update, Sparkle appcast, release metadata committed back to `main`.
+- `.github/workflows/release-appstore.yml`: manual — App Store signing/profile, `.pkg`, upload via `xcrun altool`.
 
-- `.github/workflows/build.yml`: on push/PR to `main`, runs setup, `swift test`, `APP_STORE=1 make build`, and direct `make build`.
-- `.github/workflows/release.yml`: tag/workflow direct release; tests, stamps version, imports Developer ID cert, `make release`, publishes GitHub Release artifacts, updates Homebrew tap, generates Sparkle appcast, commits release metadata back to `main`.
-- `.github/workflows/release-appstore.yml`: manual App Store build/upload; tests, stamps version/build, signs with App Store certificate/profile, packages a `.pkg`, uploads to App Store Connect.
+Caution: the repo slug appears as both `hold-to-talk` and `holdtotalk` in README/templates. Verify actual URLs before editing release automation.
 
-Be careful editing release workflow paths and repository slugs. The public README and some templates historically use both `hold-to-talk` and `holdtotalk` forms; verify actual URLs before changing release automation.
+## Troubleshooting (symptom → fix)
 
-## Coding Conventions
-
-- Prefer existing SwiftUI/AppKit patterns over new abstractions.
-- Keep app UI changes native and compact; this is a utility app, not a marketing surface.
-- Use `@MainActor` for UI and `DictationEngine` state. Keep long recognition/download/extraction work off the main actor.
-- `Transcriber` is an `actor`; preserve actor isolation around recognizer/model access.
-- `AudioRecorder` is `@unchecked Sendable` guarded by `NSLock`; keep tap callbacks nonblocking.
-- Avoid force unwraps except for hardcoded URL literals and documented Application Support directory lookups already following the project style.
-- Prefer failable initialization and user-facing errors for model/provider failures over crashes.
-- Access SwiftPM resources through app-bundle resource paths first when needed, then `Bundle.module` fallback; `.app` bundle layout differs from raw `swift run`.
-- Keep privacy/security tests updated when touching cloud providers, URL validation, key handling, logging, or text insertion.
-- Do not commit downloaded frameworks, local demo-video dependencies/output, test audio, `.build`, or `dist`.
-
-## Troubleshooting
-
-- Permissions may not auto-detect after ad-hoc rebuilds because macOS TCC associates grants with code identity. Use debug Skip Permissions for UI work, stable signing for permission testing, or `make test-reset`.
-- `CGPreflightPostEventAccess()` can be stale in-process. `SystemSettingsHelper` intentionally combines preflight, Accessibility trust, and a test event.
-- macOS may launch `/Applications/Hold To Talk.app` instead of the debug app. Run `make test-reset` or remove the installed app before debugging.
-- Manual `swift build` does not assemble a full `.app` or copy/sign Sparkle. Use `make run`/`make build` when testing runtime bundle behavior.
-- If Sparkle framework loading fails, check that `make build` copied it into `Contents/Frameworks` and added the `@executable_path/../Frameworks` rpath.
-- If local model initialization fails, delete the downloaded model from Settings or remove `~/Library/Application Support/HoldToTalk/models` and re-download.
+- Permissions not detected after ad-hoc rebuilds → macOS TCC ties grants to code identity. Use debug Skip Permissions for UI work, stable signing for permission testing, or `make test-reset`.
+- `CGPreflightPostEventAccess()` stale in-process → expected; `SystemSettingsHelper` combines preflight, Accessibility trust, and a test event.
+- macOS launches `/Applications/Hold To Talk.app` instead of the debug app → `make test-reset` or remove the installed app.
+- `swift build` alone doesn't assemble a `.app` or copy/sign Sparkle → use `make run`/`make build` for runtime bundle behavior.
+- Sparkle framework fails to load → check `make build` copied it into `Contents/Frameworks` and added the `@executable_path/../Frameworks` rpath.
+- Local model init fails → delete the model in Settings or remove `~/Library/Application Support/HoldToTalk/models` and re-download.
+- Reset TCC manually: `tccutil reset Microphone|Accessibility|ListenEvent com.holdtotalk.app`.
