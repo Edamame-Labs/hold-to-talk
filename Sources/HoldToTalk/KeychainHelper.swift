@@ -4,15 +4,10 @@ import Security
 /// Stores and retrieves API keys in the macOS Keychain.
 enum KeychainHelper {
     private static let service = "com.holdtotalk.apikeys"
-    private static let allowedAccounts: Set<String> = ["openai", "anthropic"]
 
     @discardableResult
-    static func save(account: String, key: String) -> Bool {
-        guard allowedAccounts.contains(account) else {
-            debugLog("[holdtotalk] Keychain save rejected for unknown account.")
-            return false
-        }
-
+    static func save(provider: CloudProvider, key: String) -> Bool {
+        let account = provider.rawValue
         let trimmedKey = key.trimmingCharacters(in: .whitespacesAndNewlines)
         let data = Data(trimmedKey.utf8)
 
@@ -28,7 +23,7 @@ enum KeychainHelper {
             kSecAttrAccount as String: account,
             kSecAttrAccessible as String: kSecAttrAccessibleWhenUnlockedThisDeviceOnly,
             kSecAttrSynchronizable as String: false,
-            kSecAttrLabel as String: "Hold to Talk \(providerDisplayName(account: account)) API key",
+            kSecAttrLabel as String: "Hold to Talk \(provider.displayName) API key",
             kSecAttrDescription as String: "API key used by Hold to Talk cloud features.",
             kSecValueData as String: data,
         ]
@@ -40,9 +35,8 @@ enum KeychainHelper {
         return true
     }
 
-    static func load(account: String) -> String? {
-        guard allowedAccounts.contains(account) else { return nil }
-
+    static func load(provider: CloudProvider) -> String? {
+        let account = provider.rawValue
         var query = baseQuery(account: account)
         query.merge([
             kSecReturnData as String: true,
@@ -55,10 +49,8 @@ enum KeychainHelper {
         return String(data: data, encoding: .utf8)
     }
 
-    static func delete(account: String) {
-        guard allowedAccounts.contains(account) else { return }
-
-        let query = baseQuery(account: account)
+    static func delete(provider: CloudProvider) {
+        let query = baseQuery(account: provider.rawValue)
         SecItemDelete(query as CFDictionary)
     }
 
@@ -69,16 +61,5 @@ enum KeychainHelper {
             kSecAttrAccount as String: account,
             kSecAttrSynchronizable as String: false,
         ]
-    }
-
-    private static func providerDisplayName(account: String) -> String {
-        switch account {
-        case "openai":
-            return "OpenAI"
-        case "anthropic":
-            return "Anthropic"
-        default:
-            return "cloud provider"
-        }
     }
 }

@@ -807,11 +807,11 @@ struct OnboardingView: View {
 
             advancedDisclosure(title: "Advanced", isExpanded: $isDictationAdvancedExpanded) {
                 TextField("Model", text: $engine.openaiTranscriptionModel,
-                          prompt: Text("gpt-4o-mini-transcribe"))
+                          prompt: Text(TranscriptionProvider.openAI.defaultModel))
                     .font(.system(.body, design: .monospaced))
 
                 TextField("Base URL", text: $engine.openaiBaseURL,
-                          prompt: Text("https://api.openai.com/v1"))
+                          prompt: Text(CloudProvider.openAI.defaultBaseURL))
                     .font(.system(.body, design: .monospaced))
             }
 
@@ -866,7 +866,7 @@ struct OnboardingView: View {
             saveOnboardingOpenAIKeyIfNeeded()
             engine.transcriptionProvider = TranscriptionProvider.openAI.rawValue
             if engine.openaiTranscriptionModel.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                engine.openaiTranscriptionModel = "gpt-4o-mini-transcribe"
+                engine.openaiTranscriptionModel = TranscriptionProvider.openAI.defaultModel
             }
             if engine.openaiBaseURL.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                 engine.openaiBaseURL = ""
@@ -986,7 +986,7 @@ struct OnboardingView: View {
                     .font(.system(.body, design: .monospaced))
 
                 TextField("Base URL", text: $engine.openaiBaseURL,
-                          prompt: Text("https://api.openai.com/v1"))
+                          prompt: Text(CloudProvider.openAI.defaultBaseURL))
                     .font(.system(.body, design: .monospaced))
             }
         case .anthropic:
@@ -1001,7 +1001,7 @@ struct OnboardingView: View {
                     .font(.system(.body, design: .monospaced))
 
                 TextField("Base URL", text: $engine.anthropicBaseURL,
-                          prompt: Text("https://api.anthropic.com"))
+                          prompt: Text(CloudProvider.anthropic.defaultBaseURL))
                     .font(.system(.body, design: .monospaced))
             }
         }
@@ -1195,7 +1195,7 @@ struct OnboardingView: View {
     private func saveOnboardingOpenAIKeyIfNeeded() {
         let trimmedAPIKey = onboardingOpenAIAPIKey.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmedAPIKey.isEmpty else { return }
-        if KeychainHelper.save(account: "openai", key: trimmedAPIKey) {
+        if KeychainHelper.save(provider: .openAI, key: trimmedAPIKey) {
             hasSavedOnboardingOpenAIKey = true
             onboardingOpenAIAPIKey = ""
         }
@@ -1204,7 +1204,7 @@ struct OnboardingView: View {
     private func saveOnboardingAnthropicKeyIfNeeded() {
         let trimmedAPIKey = onboardingAnthropicAPIKey.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmedAPIKey.isEmpty else { return }
-        if KeychainHelper.save(account: "anthropic", key: trimmedAPIKey) {
+        if KeychainHelper.save(provider: .anthropic, key: trimmedAPIKey) {
             hasSavedOnboardingAnthropicKey = true
             onboardingAnthropicAPIKey = ""
         }
@@ -1272,7 +1272,10 @@ struct OnboardingView: View {
         }
     }
 
-    private func requestMicrophonePermission(openSettings: Bool = true, completion: (() -> Void)? = nil) {
+    private func requestMicrophonePermission(
+        openSettings: Bool = true,
+        completion: (@MainActor @Sendable () -> Void)? = nil
+    ) {
         let status = AVCaptureDevice.authorizationStatus(for: .audio)
         switch status {
         case .authorized:
@@ -1447,9 +1450,5 @@ private final class HotkeyTester: ObservableObject {
     func remove() {
         hotkeyManager?.stop()
         hotkeyManager = nil
-    }
-
-    deinit {
-        hotkeyManager?.stop()
     }
 }

@@ -26,12 +26,12 @@ enum CloudTextCleanup {
             case .openAI:
                 result = try await openAI(
                     text, apiKey: apiKey, model: model, prompt: prompt,
-                    baseURL: baseURL ?? "https://api.openai.com/v1"
+                    baseURL: baseURL ?? CloudProvider.openAI.defaultBaseURL
                 )
             case .anthropic:
                 result = try await anthropic(
                     text, apiKey: apiKey, model: model, prompt: prompt,
-                    baseURL: baseURL ?? "https://api.anthropic.com"
+                    baseURL: baseURL ?? CloudProvider.anthropic.defaultBaseURL
                 )
             case .appleIntelligence:
                 return Result(text: text, userFacingError: nil)

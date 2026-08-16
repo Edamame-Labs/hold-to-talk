@@ -35,30 +35,10 @@ final class HotkeyManager {
         case commandShiftSpace = "command_shift_space"
 
         var displayName: String {
-            switch self {
-            case .fn: return "Fn"
-            case .control: return "Control"
-            case .leftControl: return "Left Control"
-            case .rightControl: return "Right Control"
-            case .option: return "Option"
-            case .leftOption: return "Left Option"
-            case .rightOption: return "Right Option"
-            case .command: return "Command"
-            case .leftCommand: return "Left Command"
-            case .rightCommand: return "Right Command"
-            case .shift: return "Shift"
-            case .leftShift: return "Left Shift"
-            case .rightShift: return "Right Shift"
-            case .f13: return "F13"
-            case .f14: return "F14"
-            case .f15: return "F15"
-            case .f16: return "F16"
-            case .f17: return "F17"
-            case .f18: return "F18"
-            case .f19: return "F19"
-            case .optionSpace: return "Option+Space"
-            case .controlSpace: return "Control+Space"
-            case .commandShiftSpace: return "Command+Shift+Space"
+            switch modifierSide {
+            case .either: return kind.displayName
+            case .left:   return "Left \(kind.displayName)"
+            case .right:  return "Right \(kind.displayName)"
             }
         }
 
@@ -152,11 +132,7 @@ final class HotkeyManager {
         }
 
         static var selectableKinds: [Kind] {
-            [
-                .fn, .control, .option, .command, .shift,
-                .f13, .f14, .f15, .f16, .f17, .f18, .f19,
-                .optionSpace, .controlSpace, .commandShiftSpace,
-            ]
+            Kind.allCases
         }
 
         static func selection(kind: Kind, side: ModifierSide = .either) -> Hotkey {

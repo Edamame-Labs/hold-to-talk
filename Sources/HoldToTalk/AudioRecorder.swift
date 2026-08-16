@@ -1,4 +1,4 @@
-import AVFoundation
+@preconcurrency import AVFoundation
 
 enum AudioRecorderError: LocalizedError {
     case alreadyRecording
@@ -8,6 +8,25 @@ enum AudioRecorderError: LocalizedError {
         case .alreadyRecording:
             return "Recording is already in progress."
         }
+    }
+}
+
+/// Thread-safe one-shot handoff for AVAudioConverter's sendable input callback.
+private final class ConverterInput: @unchecked Sendable {
+    private let lock = NSLock()
+    private let buffer: AVAudioPCMBuffer
+    private var consumed = false
+
+    init(buffer: AVAudioPCMBuffer) {
+        self.buffer = buffer
+    }
+
+    func take() -> AVAudioPCMBuffer? {
+        lock.lock()
+        defer { lock.unlock() }
+        guard !consumed else { return nil }
+        consumed = true
+        return buffer
     }
 }
 
@@ -170,15 +189,14 @@ final class AudioRecorder: @unchecked Sendable {
         }
 
         var error: NSError?
-        var consumed = false
+        let converterInput = ConverterInput(buffer: combined)
         converter.convert(to: output, error: &error) { _, outStatus in
-            if consumed {
+            guard let input = converterInput.take() else {
                 outStatus.pointee = .endOfStream
                 return nil
             }
-            consumed = true
             outStatus.pointee = .haveData
-            return combined
+            return input
         }
 
         if let error {
