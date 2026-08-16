@@ -23,18 +23,18 @@ struct OnboardingView: View {
     @State private var settingsReturnTask: Task<Void, Never>?
     @State private var speechSetupMode: SpeechSetupMode = .local
     @State private var isDictationAdvancedExpanded = false
-    @State private var cleanupSetupMode: CleanupSetupMode = .off
-    @State private var isCleanupAdvancedExpanded = false
     @State private var onboardingOpenAIAPIKey = ""
-    @State private var onboardingAnthropicAPIKey = ""
+    @State private var onboardingAPIKeyError: String?
     @AppStorage(openaiAPIKeySavedDefaultsKey) private var hasSavedOnboardingOpenAIKey = false
-    @AppStorage(anthropicAPIKeySavedDefaultsKey) private var hasSavedOnboardingAnthropicKey = false
     @StateObject private var hotkeyTester = HotkeyTester()
 
     init(engine: DictationEngine, modelManager: ModelManager) {
         self.engine = engine
         self.modelManager = modelManager
         self.systemCompatibility = .current()
+        _speechSetupMode = State(
+            initialValue: engine.resolvedTranscriptionProvider == .openAI ? .openAI : .local
+        )
         #if DEBUG
         if let override = DebugFlags.onboardingStep {
             let clamped = max(0, min(override, 3))
@@ -66,8 +66,8 @@ struct OnboardingView: View {
 
         var subtitle: String {
             switch self {
-            case .microphone: "Record your voice for transcription."
-            case .keyboardAccess: "Type dictated text into any application."
+            case .microphone: "Records only while you hold the shortcut."
+            case .keyboardAccess: "Inserts dictated text into the app you were using."
             }
         }
     }
@@ -88,53 +88,13 @@ struct OnboardingView: View {
         }
     }
 
-    private enum CleanupSetupMode: String, CaseIterable, Identifiable {
-        case off
-        case appleIntelligence
-        case openAI
-        case anthropic
-
-        var id: String { rawValue }
-
-        var title: String {
-            switch self {
-            case .off: return "Off"
-            case .appleIntelligence: return "Apple Intelligence"
-            case .openAI: return "OpenAI"
-            case .anthropic: return "Anthropic"
-            }
-        }
-
-        var subtitle: String {
-            switch self {
-            case .off:
-                return "Insert the transcript exactly as dictated."
-            case .appleIntelligence:
-                return "Polish text on this Mac when Apple Intelligence is available."
-            case .openAI:
-                return "Use your OpenAI key for punctuation and cleanup."
-            case .anthropic:
-                return "Use your Anthropic key for punctuation and cleanup."
-            }
-        }
-
-        var icon: String {
-            switch self {
-            case .off: return "text.quote"
-            case .appleIntelligence: return "sparkles"
-            case .openAI: return "cloud.fill"
-            case .anthropic: return "cloud.fill"
-            }
-        }
-    }
-
     var body: some View {
         let needsInstallation = !isInstalledInApplicationsFolder()
 
         VStack(spacing: 0) {
             if !needsInstallation {
                 HStack(spacing: 8) {
-                    ForEach(0..<5) { i in
+                    ForEach(0..<4) { i in
                         Capsule()
                             .fill(i <= step ? Color.accentColor : Color.secondary.opacity(0.25))
                             .frame(height: 4)
@@ -154,7 +114,6 @@ struct OnboardingView: View {
                     case 0: welcomeStep
                     case 1: permissionsStep
                     case 2: dictationStep
-                    case 3: cleanupStep
                     default: hotkeyStep
                     }
                 }
@@ -176,13 +135,13 @@ struct OnboardingView: View {
         case 0:
             return 640
         case 1:
-            return 650
+            return 690
         case 2:
             return 680
         case 3:
-            return 620
+            return 610
         default:
-            return 540
+            return 610
         }
     }
 
@@ -599,6 +558,9 @@ struct OnboardingView: View {
         .padding(32)
         .frame(maxWidth: onboardingContentWidth + 64)
         .task {
+            startLocalModelDownloadIfNeeded(
+                provider: speechSetupMode == .local ? .local : .openAI
+            )
             refreshPermissions()
             while !Task.isCancelled {
                 try? await Task.sleep(nanoseconds: 1_000_000_000)
@@ -635,6 +597,20 @@ struct OnboardingView: View {
             }
             ProgressView(value: Double(permissionsGrantedCount), total: 2)
                 .progressViewStyle(.linear)
+
+            if speechSetupMode == .local && modelManager.isDownloading {
+                Divider()
+                    .padding(.vertical, 4)
+                HStack(spacing: 8) {
+                    Image(systemName: "arrow.down.circle")
+                    Text("Preparing local dictation")
+                    Spacer()
+                    Text("\(Int(modelManager.downloadProgress * 100))%")
+                        .monospacedDigit()
+                }
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+            }
         }
         .padding(16)
         .background(
@@ -745,6 +721,10 @@ struct OnboardingView: View {
             }
             .frame(maxWidth: onboardingContentWidth)
 
+            Text("Text cleanup and advanced provider options remain available in Settings.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+
             HStack(spacing: 12) {
                 Button("Back") {
                     step = 1
@@ -786,6 +766,11 @@ struct OnboardingView: View {
                 withAnimation(.easeInOut(duration: 0.18)) {
                     speechSetupMode = mode
                 }
+                if mode == .local {
+                    startLocalModelDownloadIfNeeded(provider: .local)
+                } else if modelManager.isDownloading {
+                    modelManager.cancelDownload()
+                }
             } label: {
                 choiceHeader(selected: selected, title: title, subtitle: subtitle, icon: icon)
             }
@@ -812,12 +797,15 @@ struct OnboardingView: View {
             } else if modelManager.isDownloading {
                 VStack(alignment: .leading, spacing: 6) {
                     ProgressView(value: modelManager.downloadProgress)
-                    Text("Downloading local model... \(Int(modelManager.downloadProgress * 100))%")
+                    Text("Preparing local dictation… \(Int(modelManager.downloadProgress * 100))%")
                         .font(.caption)
+                        .foregroundStyle(.secondary)
+                    Text("You can continue while the model downloads.")
+                        .font(.caption2)
                         .foregroundStyle(.secondary)
                 }
             } else {
-                Button("Download Local Model") {
+                Button(modelManager.downloadError == nil ? "Download Local Model" : "Try Download Again") {
                     modelManager.download()
                 }
                 .buttonStyle(.bordered)
@@ -861,6 +849,13 @@ struct OnboardingView: View {
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
+
+            if let onboardingAPIKeyError {
+                Text(onboardingAPIKeyError)
+                    .font(.caption)
+                    .foregroundStyle(.red)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
         }
     }
 
@@ -868,15 +863,11 @@ struct OnboardingView: View {
         hasSavedOnboardingOpenAIKey || !onboardingOpenAIAPIKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 
-    private var hasOnboardingAnthropicKey: Bool {
-        hasSavedOnboardingAnthropicKey || !onboardingAnthropicAPIKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-    }
-
     private var canContinueDictationSetup: Bool {
         guard systemCompatibility.isAppleSiliconMac else { return false }
         switch speechSetupMode {
         case .local:
-            return modelManager.isDownloaded
+            return modelManager.isDownloaded || modelManager.isDownloading
         case .openAI:
             return hasOnboardingOpenAIKey
         }
@@ -891,6 +882,9 @@ struct OnboardingView: View {
         } else {
             speechSetupMode = .local
         }
+        startLocalModelDownloadIfNeeded(
+            provider: speechSetupMode == .local ? .local : .openAI
+        )
         warmUpModelIfReady()
     }
 
@@ -900,7 +894,7 @@ struct OnboardingView: View {
             engine.transcriptionProvider = TranscriptionProvider.local.rawValue
             warmUpModelIfReady()
         case .openAI:
-            saveOnboardingOpenAIKeyIfNeeded()
+            guard saveOnboardingOpenAIKeyIfNeeded() else { return }
             engine.transcriptionProvider = TranscriptionProvider.openAI.rawValue
             if engine.openaiTranscriptionModel.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                 engine.openaiTranscriptionModel = TranscriptionProvider.openAI.defaultModel
@@ -912,219 +906,7 @@ struct OnboardingView: View {
         step = 3
     }
 
-    // MARK: - Step 4: Cleanup
-
-    private var cleanupStep: some View {
-        VStack(spacing: 18) {
-            Text("Cleanup")
-                .font(.title2.bold())
-
-            Text("Choose what happens after transcription.")
-                .font(.body)
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
-                .fixedSize(horizontal: false, vertical: true)
-                .frame(maxWidth: onboardingContentWidth)
-
-            VStack(spacing: 10) {
-                cleanupChoiceCard(.off)
-                cleanupChoiceCard(.appleIntelligence)
-                cleanupChoiceCard(.openAI)
-                cleanupChoiceCard(.anthropic)
-            }
-            .frame(maxWidth: onboardingContentWidth)
-
-            HStack(spacing: 12) {
-                Button("Back") {
-                    step = 2
-                }
-                .buttonStyle(.bordered)
-                .controlSize(.large)
-
-                Button("Continue") {
-                    finishCleanupSetup()
-                }
-                .buttonStyle(.borderedProminent)
-                .controlSize(.large)
-                .disabled(!canContinueCleanupSetup)
-            }
-            .padding(.top, 4)
-        }
-        .padding(32)
-        .frame(maxWidth: onboardingContentWidth + 64)
-        .onAppear {
-            prepareCleanupSetup()
-        }
-    }
-
-    private func cleanupChoiceCard(_ mode: CleanupSetupMode) -> some View {
-        let selected = cleanupSetupMode == mode
-        let disabled = mode == .appleIntelligence && TextCleanup.checkAvailability() != .available
-
-        return VStack(alignment: .leading, spacing: 10) {
-            Button {
-                guard !disabled else { return }
-                withAnimation(.easeInOut(duration: 0.18)) {
-                    cleanupSetupMode = mode
-                }
-            } label: {
-                choiceHeader(
-                    selected: selected,
-                    title: mode.title,
-                    subtitle: cleanupSubtitle(for: mode),
-                    icon: mode.icon
-                )
-            }
-            .buttonStyle(.plain)
-            .disabled(disabled)
-
-            if selected {
-                cleanupDetails(for: mode)
-                    .padding(.top, 2)
-                    .transition(.opacity.combined(with: .move(edge: .top)))
-            }
-        }
-        .padding(14)
-        .background(choiceBackground(selected: selected))
-        .overlay(choiceBorder(selected: selected))
-        .opacity(disabled ? 0.62 : 1)
-    }
-
-    private func cleanupSubtitle(for mode: CleanupSetupMode) -> String {
-        if mode == .appleIntelligence {
-            let availability = TextCleanup.checkAvailability()
-            if availability != .available {
-                return textCleanupUnavailableReason(availability)
-            }
-        }
-        return mode.subtitle
-    }
-
-    @ViewBuilder
-    private func cleanupDetails(for mode: CleanupSetupMode) -> some View {
-        switch mode {
-        case .off:
-            Text("Fastest path. You can turn cleanup on later in Settings.")
-                .font(.caption)
-                .foregroundStyle(.secondary)
-        case .appleIntelligence:
-            Label("Cleanup runs on this Mac", systemImage: "checkmark.circle.fill")
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(.green)
-        case .openAI:
-            cloudCleanupFields(
-                keyPrompt: hasSavedOnboardingOpenAIKey ? "New OpenAI API Key" : "OpenAI API Key",
-                key: $onboardingOpenAIAPIKey,
-                saved: hasSavedOnboardingOpenAIKey,
-                missingText: "Enter an OpenAI API key to continue with cloud cleanup."
-            ) {
-                TextField("Model", text: $engine.openaiCleanupModel,
-                          prompt: Text(CleanupProvider.openAI.defaultModel))
-                    .font(.system(.body, design: .monospaced))
-
-                TextField("Base URL", text: $engine.openaiBaseURL,
-                          prompt: Text(CloudProvider.openAI.defaultBaseURL))
-                    .font(.system(.body, design: .monospaced))
-            }
-        case .anthropic:
-            cloudCleanupFields(
-                keyPrompt: hasSavedOnboardingAnthropicKey ? "New Anthropic API Key" : "Anthropic API Key",
-                key: $onboardingAnthropicAPIKey,
-                saved: hasSavedOnboardingAnthropicKey,
-                missingText: "Enter an Anthropic API key to continue with cloud cleanup."
-            ) {
-                TextField("Model", text: $engine.anthropicCleanupModel,
-                          prompt: Text(CleanupProvider.anthropic.defaultModel))
-                    .font(.system(.body, design: .monospaced))
-
-                TextField("Base URL", text: $engine.anthropicBaseURL,
-                          prompt: Text(CloudProvider.anthropic.defaultBaseURL))
-                    .font(.system(.body, design: .monospaced))
-            }
-        }
-    }
-
-    private func cloudCleanupFields<Advanced: View>(
-        keyPrompt: String,
-        key: Binding<String>,
-        saved: Bool,
-        missingText: String,
-        @ViewBuilder advanced: () -> Advanced
-    ) -> some View {
-        VStack(alignment: .leading, spacing: 10) {
-            SecureField(keyPrompt, text: key)
-
-            advancedDisclosure(title: "Advanced", isExpanded: $isCleanupAdvancedExpanded) {
-                advanced()
-            }
-
-            if saved && key.wrappedValue.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                Text("Key saved. Enter a new key only to replace it.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            } else if key.wrappedValue.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                Text(missingText)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-        }
-    }
-
-    private var canContinueCleanupSetup: Bool {
-        switch cleanupSetupMode {
-        case .off:
-            return true
-        case .appleIntelligence:
-            return TextCleanup.checkAvailability() == .available
-        case .openAI:
-            return hasOnboardingOpenAIKey
-        case .anthropic:
-            return hasOnboardingAnthropicKey
-        }
-    }
-
-    private func prepareCleanupSetup() {
-        if !engine.textCleanupEnabled {
-            cleanupSetupMode = .off
-            return
-        }
-
-        switch engine.resolvedCleanupProvider {
-        case .appleIntelligence:
-            cleanupSetupMode = TextCleanup.checkAvailability() == .available ? .appleIntelligence : .off
-        case .openAI:
-            cleanupSetupMode = .openAI
-        case .anthropic:
-            cleanupSetupMode = .anthropic
-        }
-    }
-
-    private func finishCleanupSetup() {
-        switch cleanupSetupMode {
-        case .off:
-            engine.textCleanupEnabled = false
-        case .appleIntelligence:
-            engine.cleanupProvider = CleanupProvider.appleIntelligence.rawValue
-            engine.textCleanupEnabled = true
-        case .openAI:
-            saveOnboardingOpenAIKeyIfNeeded()
-            engine.cleanupProvider = CleanupProvider.openAI.rawValue
-            engine.textCleanupEnabled = true
-            if engine.openaiCleanupModel.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                engine.openaiCleanupModel = CleanupProvider.openAI.defaultModel
-            }
-        case .anthropic:
-            saveOnboardingAnthropicKeyIfNeeded()
-            engine.cleanupProvider = CleanupProvider.anthropic.rawValue
-            engine.textCleanupEnabled = true
-            if engine.anthropicCleanupModel.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                engine.anthropicCleanupModel = CleanupProvider.anthropic.defaultModel
-            }
-        }
-        step = 4
-    }
-
-    // MARK: - Step 5: Hotkey
+    // MARK: - Step 4: Hotkey
 
     private var resolvedHotkey: HotkeyManager.Hotkey {
         HotkeyManager.Hotkey.preferredSelection(from: engine.hotkeyChoice)
@@ -1132,7 +914,7 @@ struct OnboardingView: View {
 
     private var hotkeyStep: some View {
         VStack(spacing: 20) {
-            Text("Hold Key")
+            Text("Choose Your Shortcut")
                 .font(.title2.bold())
 
             VStack(spacing: 16) {
@@ -1170,7 +952,7 @@ struct OnboardingView: View {
                         Image(systemName: "checkmark.circle.fill")
                             .font(.system(size: 32))
                             .foregroundStyle(.green)
-                        Text("Hotkey works! You're ready to go.")
+                        Text("Hotkey works.")
                             .font(.callout)
                             .foregroundStyle(.green)
                             .fixedSize(horizontal: false, vertical: true)
@@ -1178,6 +960,8 @@ struct OnboardingView: View {
                 }
                 .frame(height: 80)
                 .animation(.easeInOut(duration: 0.2), value: hotkeyTester.phase)
+
+                dictationReadinessCard
 
                 HStack(spacing: 8) {
                     Image(systemName: "dock.rectangle")
@@ -1189,18 +973,30 @@ struct OnboardingView: View {
                 .padding(.top, 12)
             }
 
-            Button("Start Using Hold to Talk") {
-                completeOnboardingAndCloseWindow()
+            HStack(spacing: 12) {
+                Button("Back") {
+                    step = 2
+                }
+                .buttonStyle(.bordered)
+                .controlSize(.large)
+
+                Button("Start Using Hold to Talk") {
+                    completeOnboardingAndCloseWindow()
+                }
+                .buttonStyle(.borderedProminent)
+                .controlSize(.large)
+                .disabled(!canCompleteOnboarding)
             }
-            .buttonStyle(.borderedProminent)
-            .controlSize(.large)
             .padding(.top, 8)
         }
         .padding(32)
         .frame(maxWidth: onboardingContentWidth + 64)
         .onAppear {
-            engine.prewarmTranscriber()
+            warmUpModelIfReady()
             hotkeyTester.install(for: resolvedHotkey)
+        }
+        .onChange(of: modelManager.isDownloaded) {
+            warmUpModelIfReady()
         }
         .onDisappear {
             hotkeyTester.remove()
@@ -1208,6 +1004,54 @@ struct OnboardingView: View {
                 step = 0
             }
         }
+    }
+
+    @ViewBuilder
+    private var dictationReadinessCard: some View {
+        if engine.resolvedTranscriptionProvider == .openAI && hasSavedOnboardingOpenAIKey {
+            Label("Cloud dictation is ready", systemImage: "checkmark.circle.fill")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.green)
+        } else if engine.resolvedTranscriptionProvider == .openAI {
+            Label("Return to Dictation and save an API key to continue.", systemImage: "exclamationmark.triangle.fill")
+                .font(.caption)
+                .foregroundStyle(.orange)
+        } else if modelManager.isDownloaded {
+            Label("Local dictation is ready", systemImage: "checkmark.circle.fill")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.green)
+        } else if modelManager.isDownloading {
+            VStack(alignment: .leading, spacing: 6) {
+                ProgressView(value: modelManager.downloadProgress)
+                Text("Preparing local dictation… \(Int(modelManager.downloadProgress * 100))%")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            .frame(maxWidth: 360)
+        } else {
+            VStack(spacing: 8) {
+                if let downloadError = modelManager.downloadError {
+                    Text(downloadError)
+                        .font(.caption)
+                        .foregroundStyle(.red)
+                        .multilineTextAlignment(.center)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                Button("Try Download Again") {
+                    modelManager.download()
+                }
+                .buttonStyle(.bordered)
+                .controlSize(.small)
+            }
+        }
+    }
+
+    private var canCompleteOnboarding: Bool {
+        onboardingDictationIsReady(
+            provider: engine.resolvedTranscriptionProvider,
+            localModelIsDownloaded: modelManager.isDownloaded,
+            hasCloudKey: hasSavedOnboardingOpenAIKey
+        )
     }
 
     // MARK: - Helpers
@@ -1229,37 +1073,26 @@ struct OnboardingView: View {
         engine.prewarmTranscriber()
     }
 
-    private func saveOnboardingOpenAIKeyIfNeeded() {
+    private func startLocalModelDownloadIfNeeded(provider: TranscriptionProvider) {
+        guard shouldAutomaticallyDownloadLocalModel(
+            provider: provider,
+            isDownloaded: modelManager.isDownloaded,
+            isDownloading: modelManager.isDownloading
+        ) else { return }
+        modelManager.download()
+    }
+
+    private func saveOnboardingOpenAIKeyIfNeeded() -> Bool {
         let trimmedAPIKey = onboardingOpenAIAPIKey.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmedAPIKey.isEmpty else { return }
+        guard !trimmedAPIKey.isEmpty else { return hasSavedOnboardingOpenAIKey }
         if KeychainHelper.save(provider: .openAI, key: trimmedAPIKey) {
             hasSavedOnboardingOpenAIKey = true
             onboardingOpenAIAPIKey = ""
+            onboardingAPIKeyError = nil
+            return true
         }
-    }
-
-    private func saveOnboardingAnthropicKeyIfNeeded() {
-        let trimmedAPIKey = onboardingAnthropicAPIKey.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmedAPIKey.isEmpty else { return }
-        if KeychainHelper.save(provider: .anthropic, key: trimmedAPIKey) {
-            hasSavedOnboardingAnthropicKey = true
-            onboardingAnthropicAPIKey = ""
-        }
-    }
-
-    private func textCleanupUnavailableReason(_ availability: TextCleanupAvailability) -> String {
-        switch availability {
-        case .available:
-            return "Apple Intelligence is available"
-        case .unavailableOSVersion:
-            return "Requires macOS 26 or later"
-        case .unavailableNotEnabled:
-            return "Enable Apple Intelligence in System Settings"
-        case .unavailableDeviceNotEligible:
-            return "This Mac does not support Apple Intelligence"
-        case .unavailableModelNotReady:
-            return "Apple Intelligence model is downloading"
-        }
+        onboardingAPIKeyError = "The API key could not be saved securely. Check Keychain access and try again."
+        return false
     }
 
     private func isGranted(_ permission: PermissionRequirement) -> Bool {
@@ -1419,6 +1252,27 @@ struct OnboardingView: View {
     }
 
     // openSystemSettings is now a shared top-level function in SystemSettingsHelper.swift
+}
+
+func shouldAutomaticallyDownloadLocalModel(
+    provider: TranscriptionProvider,
+    isDownloaded: Bool,
+    isDownloading: Bool
+) -> Bool {
+    provider == .local && !isDownloaded && !isDownloading
+}
+
+func onboardingDictationIsReady(
+    provider: TranscriptionProvider,
+    localModelIsDownloaded: Bool,
+    hasCloudKey: Bool
+) -> Bool {
+    switch provider {
+    case .local:
+        return localModelIsDownloaded
+    case .openAI:
+        return hasCloudKey
+    }
 }
 
 private struct OnboardingWindowReader: NSViewRepresentable {
