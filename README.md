@@ -37,6 +37,10 @@
 - **Auto-updates** — direct downloads update in-app via [Sparkle](https://sparkle-project.org).
 - **Stays close at hand** — opens as a normal Mac app and keeps a menu bar status control. Hold a key to record, release to paste.
 
+## For teams
+
+Push configuration fleet-wide via MDM managed preferences, pre-approve permissions with standard PPPC profiles, and route cloud traffic through your own proxy or Azure OpenAI with per-user SSO — or run fully on-device for air-gapped environments. See the [Enterprise Deployment Guide](docs/enterprise/README.md).
+
 ## Install
 
 **Requirements:** macOS 15+ and Apple Silicon.
@@ -98,6 +102,23 @@ make test-reset     # full uninstall + reset all state + reset permissions
 
 ## Architecture
 
+```mermaid
+flowchart LR
+    HK[HotkeyManager] --> DE[DictationEngine]
+    DE --> AR[AudioRecorder]
+    AR --> TR{"Transcription"}
+    TR -->|"local (default)"| PT["Transcriber — Parakeet TDT via sherpa-onnx"]
+    TR -->|"cloud (opt-in)"| CT["CloudTranscriber — OpenAI-compatible"]
+    PT --> CL{"Text cleanup"}
+    CT --> CL
+    CL -->|"Apple Intelligence (on-device)"| TC[TextCleanup]
+    CL -->|"OpenAI / Anthropic"| CC[CloudTextCleanup]
+    CL -->|"off"| TI[TextInserter]
+    TC --> TI
+    CC --> TI
+    TI --> APP["Previously active app"]
+```
+
 ```
 HoldToTalkApp       SwiftUI app with Dock presence and menu bar status control
 DictationEngine     Orchestrator: record -> transcribe -> cleanup -> insert
@@ -152,6 +173,18 @@ macOS will prompt for:
 Contributions welcome. Please open an issue to discuss larger changes before submitting a PR.
 
 ## Privacy
+
+```mermaid
+flowchart LR
+    subgraph LOCAL["Local mode — default"]
+        A1[Microphone] --> B1["Parakeet TDT on your Mac"] --> C1["Text inserted"]
+    end
+    subgraph CLOUD["Cloud mode — opt-in, your key"]
+        A2[Microphone] --> B2["Your provider, direct HTTPS"] --> C2["Text inserted"]
+    end
+```
+
+There are no Hold To Talk servers in either path.
 
 Transcription runs on your Apple Silicon Mac by default — no accounts, no tracking. If you opt in to cloud transcription or cleanup, audio or text is sent directly to the provider (OpenAI or Anthropic) using your own API key. Hold to Talk never proxies, stores, or has access to your data. API keys are stored in the macOS Keychain for this Mac only. Diagnostic logs are off by default, local only, and redact transcript text. See [Privacy Policy](PRIVACY.md).
 

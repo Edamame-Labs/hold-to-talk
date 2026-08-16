@@ -903,6 +903,127 @@
       margin-top: 24px;
     }
 
+    .modes-note a { color: var(--accent); text-decoration: none; }
+    .modes-note a:hover { text-decoration: underline; }
+
+    /* ---- Mode data-flow ---- */
+    .mode-flow {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 24px;
+      padding-top: 20px;
+      border-top: 0.5px solid var(--glass-border-bottom);
+      flex-wrap: wrap;
+    }
+
+    .mf-node {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--text-secondary);
+      padding: 6px 10px;
+      border-radius: 8px;
+      background: var(--accent-soft);
+      white-space: nowrap;
+    }
+
+    .mf-node svg {
+      width: 13px; height: 13px;
+      stroke: var(--accent);
+      fill: none; stroke-width: 2;
+      stroke-linecap: round; stroke-linejoin: round;
+    }
+
+    .mf-node.mf-accent { color: var(--accent); font-weight: 600; }
+
+    .mf-arrow { display: inline-flex; opacity: 0.4; }
+    .mf-arrow svg {
+      width: 14px; height: 14px;
+      stroke: var(--text-secondary);
+      fill: none; stroke-width: 2;
+    }
+
+    /* ---- Pipeline ---- */
+    .pipeline { padding: 80px 0 20px; }
+
+    .pipe {
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    .pipe-node {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      width: 132px;
+      text-align: center;
+      cursor: default;
+    }
+
+    .pipe-icon {
+      width: 52px; height: 52px;
+      border-radius: 16px;
+      background: var(--glass-bg-solid);
+      border: 0.5px solid var(--glass-border-bottom);
+      box-shadow: var(--glass-shadow);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.25s;
+    }
+
+    .pipe-node:hover .pipe-icon { transform: translateY(-3px); box-shadow: var(--glass-shadow-lg); }
+
+    .pipe-icon svg {
+      width: 22px; height: 22px;
+      stroke: var(--icon-color);
+      fill: none; stroke-width: 1.5;
+      stroke-linecap: round; stroke-linejoin: round;
+    }
+
+    .pipe-label { font-size: 13px; font-weight: 600; }
+    .pipe-sub { font-size: 11px; color: var(--text-secondary); margin-top: -4px; }
+
+    .pipe-connector {
+      flex: 0 0 36px;
+      height: 2px;
+      margin-top: 25px;
+      background: linear-gradient(90deg, var(--accent), #af52de);
+      opacity: 0.3;
+      border-radius: 2px;
+      position: relative;
+    }
+
+    .pipe-connector::after {
+      content: "";
+      position: absolute;
+      top: 50%; left: 0;
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      background: var(--accent);
+      transform: translate(-50%, -50%);
+      animation: pipePulse 2.8s linear infinite;
+      animation-delay: var(--pd, 0s);
+    }
+
+    @keyframes pipePulse {
+      0% { left: 0; opacity: 0; }
+      15% { opacity: 1; }
+      85% { opacity: 1; }
+      100% { left: 100%; opacity: 0; }
+    }
+
+    @media (max-width: 760px) {
+      .pipe-connector { display: none; }
+      .pipe-node { width: 30%; margin-bottom: 20px; }
+    }
+
     /* ---- Steps ---- */
     .how-it-works { padding: 80px 0; }
 
@@ -1256,6 +1377,7 @@
     <div class="nav-links">
       <a href="#features">Features</a>
       <a href="#security">Security</a>
+      <a href="#teams">Teams</a>
       <a href="#how">How it works</a>
       <a href="#faq">FAQ</a>
       <a href="https://github.com/Edamame-Labs/hold-to-talk">GitHub</a>
@@ -1370,6 +1492,13 @@
           <li><i data-lucide="check"></i><span>Optional <strong>Apple Intelligence</strong> cleanup also stays on-device (macOS 26+)</span></li>
           <li><i data-lucide="check"></i><span><strong>No account, no key, no cost</strong> — nothing leaves your Mac</span></li>
         </ul>
+        <div class="mode-flow" aria-label="Local data flow: microphone to on-device model to your app">
+          <span class="mf-node"><i data-lucide="mic"></i>Mic</span>
+          <span class="mf-arrow"><i data-lucide="arrow-right"></i></span>
+          <span class="mf-node mf-accent"><i data-lucide="cpu"></i>On-device</span>
+          <span class="mf-arrow"><i data-lucide="arrow-right"></i></span>
+          <span class="mf-node"><i data-lucide="monitor"></i>Your app</span>
+        </div>
       </div>
 
       <div class="mode-card glass spot reveal" style="--d:0.1s">
@@ -1386,6 +1515,13 @@
           <li><i data-lucide="check"></i><span><strong>Ephemeral session</strong> — no cookies, no disk cache, no Hold To Talk servers</span></li>
           <li><i data-lucide="check"></i><span><strong>Billed by your provider</strong>, only when you use it</span></li>
         </ul>
+        <div class="mode-flow" aria-label="Cloud data flow: microphone to your provider over HTTPS to your app">
+          <span class="mf-node"><i data-lucide="mic"></i>Mic</span>
+          <span class="mf-arrow"><i data-lucide="arrow-right"></i></span>
+          <span class="mf-node mf-accent"><i data-lucide="key-round"></i>Provider, direct</span>
+          <span class="mf-arrow"><i data-lucide="arrow-right"></i></span>
+          <span class="mf-node"><i data-lucide="monitor"></i>Your app</span>
+        </div>
       </div>
 
     </div>
@@ -1499,6 +1635,52 @@
   </div>
 </section>
 
+<section class="features" id="teams">
+  <div class="container">
+    <div class="section-heading reveal">
+      <div class="eyebrow">For teams</div>
+      <h2>Deploy it your way</h2>
+      <p>Managed, proxied, or fully air-gapped.</p>
+    </div>
+    <div class="features-grid security-grid">
+
+      <div class="feature-card glass spot reveal" style="--d:0s">
+        <div class="icon-wrap">
+          <i data-lucide="sliders-horizontal"></i>
+        </div>
+        <h3>MDM-ready</h3>
+        <p>Every setting is a managed-preferences key — push provider, model, proxy, and prompt config fleet-wide.</p>
+      </div>
+
+      <div class="feature-card glass spot reveal" style="--d:0.06s">
+        <div class="icon-wrap">
+          <i data-lucide="badge-check"></i>
+        </div>
+        <h3>PPPC permissions</h3>
+        <p>Pre-approve Microphone and Accessibility with standard MDM profiles. No Input Monitoring profile needed.</p>
+      </div>
+
+      <div class="feature-card glass spot reveal" style="--d:0.12s">
+        <div class="icon-wrap">
+          <i data-lucide="server"></i>
+        </div>
+        <h3>Your proxy, your rules</h3>
+        <p>Point the custom base URL at your proxy or Azure OpenAI — SSO auth, rate limits, audit logs, cost attribution.</p>
+      </div>
+
+      <div class="feature-card glass spot reveal" style="--d:0.18s">
+        <div class="icon-wrap">
+          <i data-lucide="wifi-off"></i>
+        </div>
+        <h3>Air-gapped option</h3>
+        <p>Fully local mode needs no network after the one-time model download. Nothing ever leaves the Mac.</p>
+      </div>
+
+    </div>
+    <p class="modes-note reveal"><a href="https://github.com/Edamame-Labs/hold-to-talk/tree/main/docs/enterprise">Read the enterprise deployment guide &rarr;</a></p>
+  </div>
+</section>
+
 <section class="how-it-works" id="how">
   <div class="container">
     <div class="section-heading reveal">
@@ -1522,6 +1704,59 @@
         <h3>Release</h3>
         <p>Let go and your words appear in the active app.</p>
       </div>
+    </div>
+  </div>
+</section>
+
+<section class="pipeline" aria-label="The pipeline">
+  <div class="container">
+    <div class="section-heading reveal">
+      <div class="eyebrow">Under the hood</div>
+      <h2>The pipeline</h2>
+      <p>What happens between key press and text on screen.</p>
+    </div>
+    <div class="pipe reveal">
+      <div class="pipe-node" id="pn-hotkey" tabindex="0">
+        <div class="pipe-icon"><i data-lucide="keyboard"></i></div>
+        <div class="pipe-label">Hotkey</div>
+        <div class="pipe-sub">hold to record</div>
+      </div>
+      <wa-tooltip for="pn-hotkey">Global hold shortcut — fn by default, no Input Monitoring required</wa-tooltip>
+      <div class="pipe-connector" style="--pd:0s"></div>
+      <div class="pipe-node" id="pn-capture" tabindex="0">
+        <div class="pipe-icon"><i data-lucide="mic"></i></div>
+        <div class="pipe-label">Capture</div>
+        <div class="pipe-sub">16 kHz mono</div>
+      </div>
+      <wa-tooltip for="pn-capture">AVAudioEngine records while you hold, resampled to 16 kHz mono</wa-tooltip>
+      <div class="pipe-connector" style="--pd:0.4s"></div>
+      <div class="pipe-node" id="pn-vad" tabindex="0">
+        <div class="pipe-icon"><i data-lucide="audio-waveform"></i></div>
+        <div class="pipe-label">VAD</div>
+        <div class="pipe-sub">segmentation</div>
+      </div>
+      <wa-tooltip for="pn-vad">Silero VAD trims silence and segments speech</wa-tooltip>
+      <div class="pipe-connector" style="--pd:0.8s"></div>
+      <div class="pipe-node" id="pn-asr" tabindex="0">
+        <div class="pipe-icon"><i data-lucide="bird"></i></div>
+        <div class="pipe-label">Parakeet</div>
+        <div class="pipe-sub">on-device</div>
+      </div>
+      <wa-tooltip for="pn-asr">NVIDIA Parakeet TDT 0.6B via sherpa-onnx — or your cloud provider</wa-tooltip>
+      <div class="pipe-connector" style="--pd:1.2s"></div>
+      <div class="pipe-node" id="pn-cleanup" tabindex="0">
+        <div class="pipe-icon"><i data-lucide="sparkles"></i></div>
+        <div class="pipe-label">Cleanup</div>
+        <div class="pipe-sub">optional</div>
+      </div>
+      <wa-tooltip for="pn-cleanup">Apple Intelligence on-device, or OpenAI / Anthropic with your key</wa-tooltip>
+      <div class="pipe-connector" style="--pd:1.6s"></div>
+      <div class="pipe-node" id="pn-insert" tabindex="0">
+        <div class="pipe-icon"><i data-lucide="type"></i></div>
+        <div class="pipe-label">Insert</div>
+        <div class="pipe-sub">any app</div>
+      </div>
+      <wa-tooltip for="pn-insert">CGEvent types into the active app, with clipboard paste as fallback</wa-tooltip>
     </div>
   </div>
 </section>
