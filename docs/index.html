@@ -205,15 +205,32 @@
     }
 
     .hero .icon-stage {
+      position: relative;
       display: inline-block;
       margin-bottom: 32px;
     }
 
+    .hero .icon-stage::before {
+      content: "";
+      position: absolute;
+      inset: -36px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(0, 113, 227, 0.28), transparent 65%);
+      filter: blur(20px);
+    }
+
     .hero .app-icon {
+      position: relative;
       width: 104px;
       height: 104px;
       border-radius: 24px;
       box-shadow: 0 2px 12px rgba(0, 0, 0, 0.12);
+    }
+
+    @media (prefers-color-scheme: dark) {
+      .hero .icon-stage::before {
+        background: radial-gradient(circle, rgba(41, 151, 255, 0.32), transparent 65%);
+      }
     }
 
     .hero h1 {
