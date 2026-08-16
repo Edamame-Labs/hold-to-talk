@@ -18,26 +18,20 @@ enum PermissionRequestResult: Equatable {
 /// process. Once it returns `false`, it may keep returning `false` even after the user
 /// grants permission in System Settings. Accessibility trust reflects the pane we ask
 /// the user to enable and is a more reliable signal for ad-hoc local builds.
-/// As a best-effort heuristic, we also attempt a test CGEvent post — if the system
-/// silently accepts it, the permission is granted even though preflight still says no.
+/// Routine status checks are intentionally passive so opening the app cannot trigger a
+/// system permission prompt. A caller may explicitly provide a test event after a
+/// user-initiated permission action to refresh the cached signals.
 func checkPostEventAccess(
     preflight: () -> Bool = { CGPreflightPostEventAccess() },
     accessibilityTrusted: () -> Bool = { AXIsProcessTrusted() },
-    postTestEvent: () -> Void = postNoOpMouseMoveEvent
+    postTestEvent: (() -> Void)? = nil
 ) -> Bool {
     if preflight() { return true }
     if accessibilityTrusted() { return true }
 
-    // Best-effort: try posting a no-visible-effect event (mouse-move to current position).
-    // Check both signals again afterward in case the post refreshed cached state.
+    guard let postTestEvent else { return false }
     postTestEvent()
     return preflight() || accessibilityTrusted()
-}
-
-private func postNoOpMouseMoveEvent() {
-    guard let event = CGEvent(source: nil) else { return }
-    event.type = .mouseMoved
-    event.post(tap: .cghidEventTap)
 }
 
 /// Relaunches the app. Used when PostEvent permission is granted in System Settings

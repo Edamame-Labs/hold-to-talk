@@ -1,4 +1,5 @@
 import Foundation
+import NaturalLanguage
 #if canImport(FoundationModels)
 import FoundationModels
 #endif
@@ -35,6 +36,7 @@ enum TextCleanup {
         Output ONLY the cleaned transcription — nothing else.
         - Remove filler words (um, uh, like, you know) unless intentional.
         - Resolve self-corrections: "Tuesday no Wednesday" → "Wednesday".
+        - Preserve the transcription's original language. Never translate it.
         - Do NOT add, remove, or change any other words.
         """
 
@@ -48,6 +50,13 @@ enum TextCleanup {
             : max(rawCharacterCount * 2, rawCharacterCount + 200)
         guard candidate.count <= maximumCharacterCount else {
             debugLog("[holdtotalk] Cleanup output rejected: too long")
+            return raw
+        }
+
+        if let rawLanguage = dominantLanguageCode(in: raw),
+           let cleanedLanguage = dominantLanguageCode(in: candidate),
+           rawLanguage != cleanedLanguage {
+            debugLog("[holdtotalk] Cleanup output rejected: language changed")
             return raw
         }
 
@@ -80,6 +89,18 @@ enum TextCleanup {
         text.lowercased()
             .split { !$0.isLetter && !$0.isNumber }
             .map(String.init)
+    }
+
+    private static func dominantLanguageCode(in text: String) -> String? {
+        let letterCount = text.unicodeScalars.lazy
+            .filter { CharacterSet.letters.contains($0) }
+            .prefix(4)
+            .count
+        guard letterCount == 4,
+              let language = NLLanguageRecognizer.dominantLanguage(for: text) else {
+            return nil
+        }
+        return language.rawValue.split(separator: "-").first.map(String.init)
     }
 
     #if canImport(FoundationModels)

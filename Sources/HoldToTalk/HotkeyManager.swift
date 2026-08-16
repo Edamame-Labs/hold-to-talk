@@ -42,6 +42,11 @@ final class HotkeyManager {
             }
         }
 
+        var conflictWarning: String? {
+            guard modifierTrigger != nil else { return nil }
+            return "Modifier-only shortcuts can also be used by macOS or other apps. If another voice input appears or release is not detected, disable the conflicting shortcut there or choose a key combination."
+        }
+
         enum Kind: String, CaseIterable, Identifiable {
             case fn
             case control

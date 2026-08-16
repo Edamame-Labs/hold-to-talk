@@ -2,6 +2,30 @@ import XCTest
 @testable import HoldToTalk
 
 final class TextCleanupSecurityTests: XCTestCase {
+    func testCleanupValidationRejectsTranslatedChineseOutput() {
+        let raw = "测试一下效果怎么样"
+        let translated = "How well does this work?"
+
+        XCTAssertEqual(
+            TextCleanup.validatedCleanedOutput(raw: raw, cleaned: translated),
+            raw
+        )
+    }
+
+    func testCleanupValidationAllowsChinesePunctuationEdits() {
+        let raw = "你好世界"
+        let cleaned = "你好，世界。"
+
+        XCTAssertEqual(
+            TextCleanup.validatedCleanedOutput(raw: raw, cleaned: cleaned),
+            cleaned
+        )
+    }
+
+    func testDefaultCleanupPromptExplicitlyForbidsTranslation() {
+        XCTAssertTrue(TextCleanup.defaultPrompt.contains("Never translate"))
+    }
+
     func testCleanupValidationAllowsSmallGrammarEdits() {
         let raw = "hello world this is a quick transcription"
         let cleaned = "Hello world, this is a quick transcription."
