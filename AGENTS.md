@@ -16,7 +16,7 @@ Hard constraints:
 ## Setup and daily commands
 
 ```bash
-make setup    # one-time: download sherpa-onnx xcframework into Frameworks/ (required before any build)
+make setup    # one-time: download sherpa-onnx xcframework into Frameworks/ (make build/run call it; needed once before raw swift build)
 swift build   # debug build
 swift test    # full test suite — run before handing off any non-docs change
 make run      # debug .app bundle + launch; enables debug onboarding controls (e.g. Skip Permissions)
