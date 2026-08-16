@@ -24,6 +24,9 @@
   <meta name="twitter:description" content="Hold a key, speak, release. Free and open-source dictation for Apple Silicon Macs.">
   <meta name="twitter:image" content="https://holdtotalk.ai/screenshot.png">
   <link rel="icon" href="logo.png" type="image/png">
+  <link rel="stylesheet" href="https://ka-f.webawesome.com/webawesome@3.11.0/styles/themes/default.css">
+  <script type="module" src="https://ka-f.webawesome.com/webawesome@3.11.0/webawesome.loader.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/lucide@1.31.0/dist/umd/lucide.min.js"></script>
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
@@ -277,6 +280,8 @@
 
     nav .nav-cta:hover { background: var(--accent-hover); transform: translateY(-1px); }
 
+    nav .nav-cta svg { width: 13px; height: 13px; }
+
     /* ---- Hero ---- */
     .hero {
       text-align: center;
@@ -418,7 +423,7 @@
       white-space: nowrap;
     }
 
-    .pill svg { width: 12px; height: 12px; fill: var(--text-secondary); }
+    .pill svg { width: 12px; height: 12px; fill: var(--text-secondary); stroke: none; }
 
     .pill .dot {
       width: 6px; height: 6px;
@@ -971,6 +976,10 @@
 
     .tech-pill:hover { color: var(--text); background: var(--glass-bg-hover); transform: translateY(-1px); }
 
+    wa-copy-button { display: inline-block; }
+
+    wa-tooltip { font-family: inherit; }
+
     /* ---- FAQ ---- */
     .faq { padding: 80px 0; }
 
@@ -1047,11 +1056,15 @@
 
     .terminal .mock-titlebar { position: relative; }
 
-    .terminal .copy-btn {
+    .terminal .copy-wrap {
       position: absolute;
       right: 10px;
       top: 50%;
       transform: translateY(-50%);
+      display: inline-block;
+    }
+
+    .terminal .copy-btn {
       background: transparent;
       border: 0.5px solid var(--glass-border-bottom);
       border-radius: 7px;
@@ -1247,7 +1260,7 @@
       <a href="#faq">FAQ</a>
       <a href="https://github.com/Edamame-Labs/hold-to-talk">GitHub</a>
       <a href="https://github.com/Edamame-Labs/hold-to-talk/releases/latest/download/HoldToTalk.dmg" class="nav-cta">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        <i data-lucide="download"></i>
         Download
       </a>
     </div>
@@ -1265,7 +1278,7 @@
     <p class="subtitle">Free, open-source dictation for Apple Silicon Macs. Local Parakeet transcription by default — hardened cloud with your own key when you choose it.</p>
     <div class="cta-row">
       <a href="https://github.com/Edamame-Labs/hold-to-talk/releases/latest/download/HoldToTalk.dmg" class="btn btn-primary">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        <i data-lucide="download"></i>
         Download for Mac
       </a>
       <a href="https://github.com/Edamame-Labs/hold-to-talk" class="btn btn-glass">
@@ -1276,16 +1289,18 @@
     <div class="meta">
       <span class="pill" id="version-pill" hidden><span class="dot"></span><span id="version-text">Latest</span></span>
       <span class="pill" id="stars-pill" hidden>
-        <svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+        <i data-lucide="star"></i>
         <span id="stars-text">—</span>
       </span>
       <span class="pill">macOS 15+</span>
       <span class="pill">Apple Silicon</span>
       <span class="pill">Free &middot; Apache 2.0</span>
-      <button class="chip-btn" data-copy="brew install edamame-labs/tap/holdtotalk" aria-label="Copy Homebrew install command">
-        brew install edamame-labs/tap/holdtotalk
-        <svg viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-      </button>
+      <wa-copy-button value="brew install edamame-labs/tap/holdtotalk" tooltip="copy" copy-label="Copy Homebrew install command" success-label="Copied!">
+        <button class="chip-btn" data-copy="brew install edamame-labs/tap/holdtotalk">
+          brew install edamame-labs/tap/holdtotalk
+          <i data-lucide="copy"></i>
+        </button>
+      </wa-copy-button>
     </div>
   </div>
 </header>
@@ -1318,7 +1333,7 @@
           <div class="mock-titlebar">
             <span class="tl r"></span><span class="tl y"></span><span class="tl g"></span>
             <span class="mock-title">
-              <svg viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+              <i data-lucide="pencil-line"></i>
               <span id="mock-app-name">Notes</span>
             </span>
           </div>
@@ -1344,32 +1359,32 @@
       <div class="mode-card glass spot reveal" style="--d:0s">
         <div class="mode-head">
           <div class="icon-wrap">
-            <svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="2"/><rect x="9" y="9" width="6" height="6"/><path d="M9 1v3M15 1v3M9 20v3M15 20v3M1 9h3M1 15h3M20 9h3M20 15h3"/></svg>
+            <i data-lucide="cpu"></i>
           </div>
           <h3>Local</h3>
           <span class="mode-badge badge-default">Default</span>
         </div>
         <ul class="mode-list">
-          <li><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg><span><strong>Parakeet TDT 0.6B</strong> transcribes entirely on your Mac via sherpa-onnx</span></li>
-          <li><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg><span><strong>Works offline</strong> after a one-time ~640 MB model download</span></li>
-          <li><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg><span>Optional <strong>Apple Intelligence</strong> cleanup also stays on-device (macOS 26+)</span></li>
-          <li><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg><span><strong>No account, no key, no cost</strong> — nothing leaves your Mac</span></li>
+          <li><i data-lucide="check"></i><span><strong>Parakeet TDT 0.6B</strong> transcribes entirely on your Mac via sherpa-onnx</span></li>
+          <li><i data-lucide="check"></i><span><strong>Works offline</strong> after a one-time ~640 MB model download</span></li>
+          <li><i data-lucide="check"></i><span>Optional <strong>Apple Intelligence</strong> cleanup also stays on-device (macOS 26+)</span></li>
+          <li><i data-lucide="check"></i><span><strong>No account, no key, no cost</strong> — nothing leaves your Mac</span></li>
         </ul>
       </div>
 
       <div class="mode-card glass spot reveal" style="--d:0.1s">
         <div class="mode-head">
           <div class="icon-wrap">
-            <svg viewBox="0 0 24 24"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>
+            <i data-lucide="key-round"></i>
           </div>
           <h3>Cloud</h3>
           <span class="mode-badge badge-optin">Opt-in &middot; your key</span>
         </div>
         <ul class="mode-list">
-          <li><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg><span><strong>OpenAI-compatible transcription</strong> (gpt-4o-mini-transcribe by default), OpenAI or Anthropic cleanup</span></li>
-          <li><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg><span>Keys live in <strong>this Mac&rsquo;s Keychain</strong>; requests go directly to the provider over HTTPS</span></li>
-          <li><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg><span><strong>Ephemeral session</strong> — no cookies, no disk cache, no Hold To Talk servers</span></li>
-          <li><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg><span><strong>Billed by your provider</strong>, only when you use it</span></li>
+          <li><i data-lucide="check"></i><span><strong>OpenAI-compatible transcription</strong> (gpt-4o-mini-transcribe by default), OpenAI or Anthropic cleanup</span></li>
+          <li><i data-lucide="check"></i><span>Keys live in <strong>this Mac&rsquo;s Keychain</strong>; requests go directly to the provider over HTTPS</span></li>
+          <li><i data-lucide="check"></i><span><strong>Ephemeral session</strong> — no cookies, no disk cache, no Hold To Talk servers</span></li>
+          <li><i data-lucide="check"></i><span><strong>Billed by your provider</strong>, only when you use it</span></li>
         </ul>
       </div>
 
@@ -1389,7 +1404,7 @@
 
       <div class="feature-card glass spot reveal" style="--d:0s">
         <div class="icon-wrap">
-          <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z" fill="none"/><path d="M8 12l2 2 4-4"/></svg>
+          <i data-lucide="code"></i>
         </div>
         <h3>Free and open-source</h3>
         <p>No subscription, no paywall, no black box. Inspect the code, build it yourself, ship it your way.</p>
@@ -1397,7 +1412,7 @@
 
       <div class="feature-card glass spot reveal" style="--d:0.06s">
         <div class="icon-wrap">
-          <svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+          <i data-lucide="hard-drive"></i>
         </div>
         <h3>Local by default</h3>
         <p>Apple Silicon runs Parakeet locally with no account or tracking. Cloud transcription is optional and uses your own API key.</p>
@@ -1405,7 +1420,7 @@
 
       <div class="feature-card glass spot reveal" style="--d:0.12s">
         <div class="icon-wrap">
-          <svg viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+          <i data-lucide="zap"></i>
         </div>
         <h3>Fast local AI on Silicon</h3>
         <p>Powered by NVIDIA Parakeet TDT through sherpa-onnx for fast, accurate on-device transcription on Apple Silicon.</p>
@@ -1413,7 +1428,7 @@
 
       <div class="feature-card glass spot reveal" style="--d:0s">
         <div class="icon-wrap">
-          <svg viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+          <i data-lucide="monitor"></i>
         </div>
         <h3>Works everywhere</h3>
         <p>Dictate into Slack, Notes, your IDE, email, or any text field. If you can type there, Hold To Talk works.</p>
@@ -1421,7 +1436,7 @@
 
       <div class="feature-card glass spot reveal" style="--d:0.06s">
         <div class="icon-wrap">
-          <svg viewBox="0 0 24 24"><path d="M12 2a4 4 0 0 0-4 4v4a4 4 0 0 0 8 0V6a4 4 0 0 0-4-4z"/><path d="M19 10v1a7 7 0 0 1-14 0v-1"/><line x1="12" y1="18" x2="12" y2="22"/></svg>
+          <i data-lucide="sparkles"></i>
         </div>
         <h3>Smart text cleanup</h3>
         <p>Optional cleanup fixes punctuation and filler words via Apple Intelligence (on-device, macOS 26+) or cloud models (OpenAI, Anthropic) with your own key.</p>
@@ -1429,7 +1444,7 @@
 
       <div class="feature-card glass spot reveal" style="--d:0.12s">
         <div class="icon-wrap">
-          <svg viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+          <i data-lucide="package"></i>
         </div>
         <h3>Install your way</h3>
         <p>Download directly, install via Homebrew, or build from source. Your workflow, your choice.</p>
@@ -1450,7 +1465,7 @@
 
       <div class="feature-card glass spot reveal" style="--d:0s">
         <div class="icon-wrap">
-          <svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+          <i data-lucide="key"></i>
         </div>
         <h3>This-Mac-only keys</h3>
         <p>OpenAI and Anthropic keys are stored in the macOS Keychain for this Mac only, not in plain text or iCloud Keychain.</p>
@@ -1458,7 +1473,7 @@
 
       <div class="feature-card glass spot reveal" style="--d:0.06s">
         <div class="icon-wrap">
-          <svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+          <i data-lucide="shield-check"></i>
         </div>
         <h3>HTTPS-only cloud</h3>
         <p>Cloud base URLs must use HTTPS and cannot include embedded credentials, query strings, or fragments.</p>
@@ -1466,7 +1481,7 @@
 
       <div class="feature-card glass spot reveal" style="--d:0.12s">
         <div class="icon-wrap">
-          <svg viewBox="0 0 24 24"><path d="M4 7h16"/><path d="M4 12h16"/><path d="M4 17h10"/><path d="M18 15l3 3m0-3l-3 3"/></svg>
+          <i data-lucide="server-off"></i>
         </div>
         <h3>No cloud cache</h3>
         <p>Cloud requests use an ephemeral session with no cookies and no disk cache for audio or transcript traffic.</p>
@@ -1474,7 +1489,7 @@
 
       <div class="feature-card glass spot reveal" style="--d:0.18s">
         <div class="icon-wrap">
-          <svg viewBox="0 0 24 24"><path d="M3 6h18"/><path d="M7 12h10"/><path d="M10 18h4"/></svg>
+          <i data-lucide="eye-off"></i>
         </div>
         <h3>Redacted diagnostics</h3>
         <p>Diagnostic logs are off by default, local only, and redact transcript content when troubleshooting is enabled.</p>
@@ -1514,13 +1529,20 @@
 <section class="tech">
   <div class="container">
     <div class="tech-row reveal" aria-label="Built with">
-      <span class="tech-pill">Parakeet TDT 0.6B</span>
-      <span class="tech-pill">sherpa-onnx</span>
-      <span class="tech-pill">Silero VAD</span>
-      <span class="tech-pill">Apple Intelligence</span>
-      <span class="tech-pill">SwiftUI</span>
-      <span class="tech-pill">Sparkle updates</span>
-      <span class="tech-pill">Apache 2.0</span>
+      <span class="tech-pill" id="tp-parakeet" tabindex="0">Parakeet TDT 0.6B</span>
+      <wa-tooltip for="tp-parakeet">NVIDIA&rsquo;s open-source English speech recognition model</wa-tooltip>
+      <span class="tech-pill" id="tp-sherpa" tabindex="0">sherpa-onnx</span>
+      <wa-tooltip for="tp-sherpa">On-device inference runtime from the Next-gen Kaldi team</wa-tooltip>
+      <span class="tech-pill" id="tp-vad" tabindex="0">Silero VAD</span>
+      <wa-tooltip for="tp-vad">Voice activity detection for speech segmentation</wa-tooltip>
+      <span class="tech-pill" id="tp-ai" tabindex="0">Apple Intelligence</span>
+      <wa-tooltip for="tp-ai">On-device text cleanup, macOS 26+</wa-tooltip>
+      <span class="tech-pill" id="tp-swiftui" tabindex="0">SwiftUI</span>
+      <wa-tooltip for="tp-swiftui">Native macOS UI framework</wa-tooltip>
+      <span class="tech-pill" id="tp-sparkle" tabindex="0">Sparkle updates</span>
+      <wa-tooltip for="tp-sparkle">In-app updates for direct-download builds</wa-tooltip>
+      <span class="tech-pill" id="tp-apache" tabindex="0">Apache 2.0</span>
+      <wa-tooltip for="tp-apache">Open-source license</wa-tooltip>
     </div>
   </div>
 </section>
@@ -1534,32 +1556,32 @@
     <div class="faq-list">
 
       <details class="faq-item glass reveal" style="--d:0s">
-        <summary>Is it really free?<svg class="chev" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg></summary>
+        <summary>Is it really free?<i class="chev" data-lucide="chevron-down"></i></summary>
         <div class="faq-body">Yes — free and open-source under Apache 2.0. No accounts, no subscriptions, no telemetry. Optional cloud transcription and cleanup use your own provider keys, billed directly by your provider only if you enable them.</div>
       </details>
 
       <details class="faq-item glass reveal" style="--d:0.04s">
-        <summary>Does it work offline?<svg class="chev" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg></summary>
+        <summary>Does it work offline?<i class="chev" data-lucide="chevron-down"></i></summary>
         <div class="faq-body">Yes. The Parakeet TDT 0.6B model downloads once (~640 MB) and then runs fully on your Mac. No network connection is needed for local dictation.</div>
       </details>
 
       <details class="faq-item glass reveal" style="--d:0.08s">
-        <summary>Which languages are supported?<svg class="chev" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg></summary>
+        <summary>Which languages are supported?<i class="chev" data-lucide="chevron-down"></i></summary>
         <div class="faq-body">The bundled Parakeet TDT 0.6B v2 model is English-only. Optional text cleanup through Apple Intelligence or your own cloud provider can further polish the English output.</div>
       </details>
 
       <details class="faq-item glass reveal" style="--d:0.12s">
-        <summary>Which Macs are supported?<svg class="chev" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg></summary>
+        <summary>Which Macs are supported?<i class="chev" data-lucide="chevron-down"></i></summary>
         <div class="faq-body">macOS 15 or later on Apple Silicon (M1 and newer). Local transcription relies on Apple Silicon performance, so Intel Macs are not supported.</div>
       </details>
 
       <details class="faq-item glass reveal" style="--d:0.16s">
-        <summary>What permissions does it need?<svg class="chev" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg></summary>
+        <summary>What permissions does it need?<i class="chev" data-lucide="chevron-down"></i></summary>
         <div class="faq-body">Two: <code>Microphone</code> to hear you, and <code>Accessibility</code> (PostEvent) to type dictated text into other apps. Hotkeys are registered through the system hotkey API — no Input Monitoring permission required.</div>
       </details>
 
       <details class="faq-item glass reveal" style="--d:0.2s">
-        <summary>Where does my audio go?<svg class="chev" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg></summary>
+        <summary>Where does my audio go?<i class="chev" data-lucide="chevron-down"></i></summary>
         <div class="faq-body">Nowhere, by default — local transcription never leaves your Mac. If you opt into cloud transcription, audio goes directly from your Mac to the HTTPS provider endpoint you configure. There are no Hold To Talk servers, and cloud sessions use no cookies or disk cache.</div>
       </details>
 
@@ -1578,10 +1600,12 @@
       <div class="mock-titlebar">
         <span class="tl r"></span><span class="tl y"></span><span class="tl g"></span>
         <span class="mock-title">Terminal</span>
-        <button class="copy-btn" data-copy="git clone https://github.com/Edamame-Labs/hold-to-talk.git && cd hold-to-talk && make build && make run" aria-label="Copy build commands">
-          <svg viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-          Copy
-        </button>
+        <wa-copy-button class="copy-wrap" value="git clone https://github.com/Edamame-Labs/hold-to-talk.git && cd hold-to-talk && make build && make run" tooltip="copy" copy-label="Copy build commands" success-label="Copied!">
+          <button class="copy-btn" data-copy="git clone https://github.com/Edamame-Labs/hold-to-talk.git && cd hold-to-talk && make build && make run">
+            <i data-lucide="copy"></i>
+            Copy
+          </button>
+        </wa-copy-button>
       </div>
       <div class="term-body">
         <span class="p">$</span> git clone https://github.com/Edamame-Labs/hold-to-talk.git<br>
@@ -1592,7 +1616,7 @@
     </div>
     <div class="gh-stats reveal">
       <span class="pill" id="stars-pill-2" hidden>
-        <svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+        <i data-lucide="star"></i>
         <span id="stars-text-2">—</span>&nbsp;stars
       </span>
       <a class="pill" href="https://github.com/Edamame-Labs/hold-to-talk/blob/main/LICENSE" style="text-decoration:none; color:inherit;">Apache 2.0 license</a>
@@ -1608,12 +1632,14 @@
       <p>Free forever. Two minutes to set up.</p>
       <div class="cta-row" style="display:flex; gap:12px; justify-content:center; flex-wrap:wrap;">
         <a href="https://github.com/Edamame-Labs/hold-to-talk/releases/latest/download/HoldToTalk.dmg" class="btn btn-primary">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          <i data-lucide="download"></i>
           Download for Mac
         </a>
-        <button class="btn btn-glass chip-btn-lg" data-copy="brew install edamame-labs/tap/holdtotalk" style="font-family:'SF Mono',Menlo,monospace; font-size:14px;">
-          brew install edamame-labs/tap/holdtotalk
-        </button>
+        <wa-copy-button value="brew install edamame-labs/tap/holdtotalk" tooltip="copy" copy-label="Copy Homebrew install command" success-label="Copied!">
+          <button class="btn btn-glass" data-copy="brew install edamame-labs/tap/holdtotalk" style="font-family:'SF Mono',Menlo,monospace; font-size:14px;">
+            brew install edamame-labs/tap/holdtotalk
+          </button>
+        </wa-copy-button>
       </div>
     </div>
   </div>
@@ -1657,6 +1683,11 @@
   "use strict";
   var reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   var finePointer = window.matchMedia("(pointer: fine)").matches;
+
+  /* ---------- Lucide icons (deferred script) ---------- */
+  document.addEventListener("DOMContentLoaded", function () {
+    if (window.lucide) lucide.createIcons();
+  });
 
   /* ---------- Nav scroll state ---------- */
   var nav = document.getElementById("nav");
