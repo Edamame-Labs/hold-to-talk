@@ -10,55 +10,106 @@
     gtag('js', new Date());
     gtag('config', 'G-Q75FRP5M1T');
   </script>
-  <title>Hold To Talk — Free Dictation for macOS</title>
-  <meta name="description" content="Free, open-source dictation for Apple Silicon Macs. Local by default, with hardened bring-your-own-key cloud options when you choose them.">
-  <meta property="og:title" content="Hold To Talk — Free Dictation for macOS">
-  <meta property="og:description" content="Free and open-source for Apple Silicon Macs. Local by default with hardened bring-your-own-key cloud options.">
-  <meta property="og:image" content="screenshot.png">
+  <title>Hold To Talk — Free, Local-First Dictation for macOS</title>
+  <meta name="description" content="Free, open-source dictation for Apple Silicon Macs. Hold a key, speak, release — your words appear in any app. Local Parakeet transcription by default, hardened bring-your-own-key cloud when you choose it.">
+  <link rel="canonical" href="https://holdtotalk.ai/">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Hold To Talk">
+  <meta property="og:url" content="https://holdtotalk.ai/">
+  <meta property="og:title" content="Hold To Talk — Free, Local-First Dictation for macOS">
+  <meta property="og:description" content="Hold a key, speak, release. Free and open-source for Apple Silicon Macs. Local by default with hardened bring-your-own-key cloud options.">
+  <meta property="og:image" content="https://holdtotalk.ai/screenshot.png">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Hold To Talk — Free, Local-First Dictation for macOS">
+  <meta name="twitter:description" content="Hold a key, speak, release. Free and open-source dictation for Apple Silicon Macs.">
+  <meta name="twitter:image" content="https://holdtotalk.ai/screenshot.png">
   <link rel="icon" href="logo.png" type="image/png">
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "Hold To Talk",
+    "url": "https://holdtotalk.ai/",
+    "operatingSystem": "macOS 15",
+    "applicationCategory": "UtilitiesApplication",
+    "description": "Free, open-source hold-to-talk dictation for Apple Silicon Macs. Local Parakeet transcription by default.",
+    "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+    "license": "https://www.apache.org/licenses/LICENSE-2.0"
+  }
+  </script>
   <style>
     :root {
       --bg: #f2f2f7;
+      --bg-elevated: #ffffff;
       --text: #1d1d1f;
       --text-secondary: #86868b;
       --accent: #0071e3;
       --accent-hover: #0077ed;
+      --accent-soft: rgba(0, 113, 227, 0.08);
+      --red: #ff453a;
 
       /* Glass tokens */
       --glass-bg: rgba(255, 255, 255, 0.55);
-      --glass-bg-hover: rgba(255, 255, 255, 0.7);
+      --glass-bg-hover: rgba(255, 255, 255, 0.72);
+      --glass-bg-solid: rgba(255, 255, 255, 0.85);
       --glass-border: rgba(255, 255, 255, 0.7);
       --glass-border-bottom: rgba(0, 0, 0, 0.06);
       --glass-shadow: 0 2px 24px rgba(0, 0, 0, 0.04), 0 0 0 0.5px rgba(0, 0, 0, 0.05);
-      --glass-shadow-lg: 0 8px 48px rgba(0, 0, 0, 0.08), 0 0 0 0.5px rgba(0, 0, 0, 0.06);
+      --glass-shadow-lg: 0 12px 48px rgba(0, 0, 0, 0.09), 0 0 0 0.5px rgba(0, 0, 0, 0.06);
       --glass-blur: blur(40px) saturate(180%);
 
       --icon-bg: rgba(0, 113, 227, 0.08);
       --icon-color: #0071e3;
       --radius: 22px;
+
+      /* Keycap */
+      --key-face-a: #ffffff;
+      --key-face-b: #f1f1f5;
+      --key-side: #d5d5db;
+      --key-text: #1d1d1f;
+
+      /* Mock window */
+      --mock-titlebar: rgba(246, 246, 248, 0.8);
+      --mock-body: rgba(255, 255, 255, 0.65);
+
+      --nav-h: 56px;
     }
 
     @media (prefers-color-scheme: dark) {
       :root {
         --bg: #000000;
+        --bg-elevated: #1c1c1e;
         --text: #f5f5f7;
         --text-secondary: #98989d;
         --accent: #2997ff;
         --accent-hover: #40a9ff;
+        --accent-soft: rgba(41, 151, 255, 0.12);
+        --red: #ff6961;
 
         --glass-bg: rgba(44, 44, 46, 0.45);
-        --glass-bg-hover: rgba(54, 54, 58, 0.6);
+        --glass-bg-hover: rgba(54, 54, 58, 0.62);
+        --glass-bg-solid: rgba(28, 28, 30, 0.85);
         --glass-border: rgba(255, 255, 255, 0.1);
         --glass-border-bottom: rgba(0, 0, 0, 0.2);
         --glass-shadow: 0 2px 24px rgba(0, 0, 0, 0.3), 0 0 0 0.5px rgba(255, 255, 255, 0.06);
-        --glass-shadow-lg: 0 8px 48px rgba(0, 0, 0, 0.5), 0 0 0 0.5px rgba(255, 255, 255, 0.08);
+        --glass-shadow-lg: 0 12px 48px rgba(0, 0, 0, 0.5), 0 0 0 0.5px rgba(255, 255, 255, 0.08);
 
         --icon-bg: rgba(41, 151, 255, 0.12);
         --icon-color: #2997ff;
+
+        --key-face-a: #4a4a4f;
+        --key-face-b: #353538;
+        --key-side: #1e1e20;
+        --key-text: #f5f5f7;
+
+        --mock-titlebar: rgba(56, 56, 60, 0.6);
+        --mock-body: rgba(30, 30, 32, 0.5);
       }
     }
 
     * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    html { scroll-behavior: smooth; }
 
     body {
       font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", Arial, sans-serif;
@@ -69,11 +120,21 @@
       overflow-x: hidden;
     }
 
+    ::selection { background: rgba(0, 113, 227, 0.25); }
+
+    :focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: 3px;
+      border-radius: 6px;
+    }
+
     .container {
-      max-width: 980px;
+      max-width: 1080px;
       margin: 0 auto;
       padding: 0 24px;
     }
+
+    section { scroll-margin-top: calc(var(--nav-h) + 16px); }
 
     /* ---- Glass panel ---- */
     .glass {
@@ -81,19 +142,12 @@
       backdrop-filter: var(--glass-blur);
       -webkit-backdrop-filter: var(--glass-blur);
       border-radius: var(--radius);
-      /* specular: bright top edge, darker bottom */
       border-top: 0.5px solid var(--glass-border);
       border-left: 0.5px solid var(--glass-border);
       border-right: 0.5px solid var(--glass-border-bottom);
       border-bottom: 0.5px solid var(--glass-border-bottom);
       box-shadow: var(--glass-shadow);
       transition: transform 0.3s ease, box-shadow 0.3s ease, background 0.3s ease;
-    }
-
-    .glass:hover {
-      background: var(--glass-bg-hover);
-      box-shadow: var(--glass-shadow-lg);
-      transform: translateY(-2px);
     }
 
     /* ---- Ambient ---- */
@@ -105,6 +159,14 @@
       overflow: hidden;
     }
 
+    .ambient::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)' opacity='0.4'/%3E%3C/svg%3E");
+      opacity: 0.035;
+    }
+
     .ambient .orb {
       position: absolute;
       border-radius: 50%;
@@ -113,7 +175,7 @@
 
     .ambient .orb-1 {
       width: 700px; height: 700px;
-      background: radial-gradient(circle, rgba(0, 113, 227, 0.15), transparent 70%);
+      background: radial-gradient(circle, rgba(0, 113, 227, 0.16), transparent 70%);
       top: -20%; right: -15%;
       animation: drift 25s ease-in-out infinite;
     }
@@ -125,32 +187,57 @@
       animation: drift 25s ease-in-out infinite reverse;
     }
 
+    .ambient .orb-3 {
+      width: 420px; height: 420px;
+      background: radial-gradient(circle, rgba(0, 199, 190, 0.08), transparent 70%);
+      top: 45%; right: 5%;
+      animation: drift 30s ease-in-out infinite 5s;
+    }
+
     @keyframes drift {
       0%, 100% { transform: translate(0, 0); }
       50% { transform: translate(40px, -30px); }
     }
 
     @media (prefers-color-scheme: dark) {
-      .ambient .orb-1 { background: radial-gradient(circle, rgba(41, 151, 255, 0.1), transparent 70%); }
-      .ambient .orb-2 { background: radial-gradient(circle, rgba(175, 82, 222, 0.08), transparent 70%); }
+      .ambient .orb-1 { background: radial-gradient(circle, rgba(41, 151, 255, 0.12), transparent 70%); }
+      .ambient .orb-2 { background: radial-gradient(circle, rgba(175, 82, 222, 0.09), transparent 70%); }
+      .ambient .orb-3 { background: radial-gradient(circle, rgba(0, 199, 190, 0.06), transparent 70%); }
     }
+
+    /* ---- Reveal on scroll ---- */
+    .reveal {
+      opacity: 0;
+      transform: translateY(24px);
+      transition: opacity 0.7s cubic-bezier(0.22, 1, 0.36, 1), transform 0.7s cubic-bezier(0.22, 1, 0.36, 1);
+      transition-delay: var(--d, 0s);
+    }
+
+    .reveal.in { opacity: 1; transform: none; }
 
     /* ---- Nav ---- */
     nav {
       position: sticky;
       top: 0;
       z-index: 100;
-      background: var(--glass-bg);
+      background: transparent;
       backdrop-filter: var(--glass-blur);
       -webkit-backdrop-filter: var(--glass-blur);
-      border-bottom: 0.5px solid var(--glass-border-bottom);
+      border-bottom: 0.5px solid transparent;
+      transition: background 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+    }
+
+    nav.scrolled {
+      background: var(--glass-bg);
+      border-bottom-color: var(--glass-border-bottom);
+      box-shadow: 0 4px 24px rgba(0, 0, 0, 0.04);
     }
 
     nav .container {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      height: 52px;
+      height: var(--nav-h);
     }
 
     nav .logo {
@@ -165,7 +252,7 @@
 
     nav .logo img { width: 28px; height: 28px; border-radius: 7px; }
 
-    nav .nav-links { display: flex; gap: 24px; align-items: center; }
+    nav .nav-links { display: flex; gap: 26px; align-items: center; }
 
     nav .nav-links a {
       color: var(--text-secondary);
@@ -176,61 +263,141 @@
 
     nav .nav-links a:hover { color: var(--text); }
 
+    nav .nav-cta {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--accent);
+      color: #fff !important;
+      padding: 7px 16px;
+      border-radius: 980px;
+      font-weight: 500;
+      transition: background 0.2s, transform 0.2s;
+    }
+
+    nav .nav-cta:hover { background: var(--accent-hover); transform: translateY(-1px); }
+
     /* ---- Hero ---- */
     .hero {
       text-align: center;
-      padding: 100px 0 40px;
+      padding: 84px 0 24px;
+    }
+
+    .hero .icon-stage {
+      position: relative;
+      display: inline-block;
+      margin-bottom: 30px;
     }
 
     .hero .app-icon {
       width: 108px;
       height: 108px;
       border-radius: 24px;
-      margin-bottom: 28px;
-      box-shadow: 0 4px 32px rgba(0,0,0,0.08);
+      position: relative;
+      z-index: 1;
+      box-shadow: 0 8px 40px rgba(0, 113, 227, 0.25), 0 2px 8px rgba(0, 0, 0, 0.08);
+      animation: float 6s ease-in-out infinite;
+    }
+
+    @keyframes float {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-6px); }
+    }
+
+    .hero .pulse-ring {
+      position: absolute;
+      inset: -14px;
+      border-radius: 34px;
+      border: 1.5px solid var(--accent);
+      opacity: 0;
+      animation: pulse 3.2s ease-out infinite;
+    }
+
+    .hero .pulse-ring:nth-child(2) { animation-delay: 1.6s; }
+
+    @keyframes pulse {
+      0% { transform: scale(0.92); opacity: 0.5; }
+      70% { opacity: 0.12; }
+      100% { transform: scale(1.35); opacity: 0; }
     }
 
     .hero h1 {
-      font-size: 56px;
+      font-size: clamp(44px, 7vw, 72px);
       font-weight: 700;
       letter-spacing: -0.035em;
-      line-height: 1.07;
-      margin-bottom: 16px;
+      line-height: 1.05;
+      margin-bottom: 18px;
+    }
+
+    .hero h1 .grad {
+      background: linear-gradient(100deg, var(--accent) 0%, #af52de 100%);
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
     }
 
     .hero .subtitle {
-      font-size: 21px;
+      font-size: clamp(17px, 2.2vw, 21px);
       color: var(--text-secondary);
-      max-width: 480px;
-      margin: 0 auto 40px;
-      line-height: 1.4;
+      max-width: 560px;
+      margin: 0 auto 36px;
+      line-height: 1.45;
     }
 
-    .hero .cta {
+    .hero .cta-row {
+      display: flex;
+      gap: 12px;
+      justify-content: center;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .btn {
       display: inline-flex;
       align-items: center;
       gap: 8px;
-      background: var(--accent);
-      color: #fff;
       text-decoration: none;
-      padding: 16px 32px;
+      padding: 15px 30px;
       border-radius: 980px;
       font-size: 17px;
       font-weight: 500;
       transition: all 0.25s ease;
+      border: none;
+      cursor: pointer;
+      font-family: inherit;
+    }
+
+    .btn-primary {
+      background: var(--accent);
+      color: #fff;
       box-shadow: 0 2px 12px rgba(0, 113, 227, 0.3);
     }
 
-    .hero .cta:hover {
+    .btn-primary:hover {
       background: var(--accent-hover);
       transform: translateY(-1px);
-      box-shadow: 0 4px 20px rgba(0, 113, 227, 0.4);
+      box-shadow: 0 6px 24px rgba(0, 113, 227, 0.4);
     }
 
-    .hero .cta svg { width: 18px; height: 18px; }
+    .btn-glass {
+      color: var(--text);
+      background: var(--glass-bg);
+      backdrop-filter: var(--glass-blur);
+      -webkit-backdrop-filter: var(--glass-blur);
+      border: 0.5px solid var(--glass-border-bottom);
+      box-shadow: var(--glass-shadow);
+    }
+
+    .btn-glass:hover {
+      background: var(--glass-bg-hover);
+      transform: translateY(-1px);
+      box-shadow: var(--glass-shadow-lg);
+    }
+
+    .btn svg { width: 18px; height: 18px; }
 
     .hero .meta {
-      margin-top: 16px;
+      margin-top: 22px;
       font-size: 13px;
       color: var(--text-secondary);
       display: flex;
@@ -240,33 +407,313 @@
       gap: 8px;
     }
 
-    .hero .brew {
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 12px;
+      border-radius: 980px;
+      background: var(--glass-bg);
+      border: 0.5px solid var(--glass-border-bottom);
+      white-space: nowrap;
+    }
+
+    .pill svg { width: 12px; height: 12px; fill: var(--text-secondary); }
+
+    .pill .dot {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: #30d158;
+    }
+
+    .chip-btn {
       font-family: "SF Mono", Menlo, monospace;
       font-size: 12px;
-      padding: 5px 12px;
+      padding: 6px 12px;
       border-radius: 8px;
       background: var(--glass-bg);
       border: 0.5px solid var(--glass-border-bottom);
+      color: var(--text-secondary);
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      transition: color 0.2s, background 0.2s, border-color 0.2s;
     }
 
-    /* ---- Demo ---- */
-    .demo {
-      text-align: center;
-      padding: 24px 0 80px;
+    .chip-btn:hover { color: var(--text); background: var(--glass-bg-hover); }
+
+    .chip-btn svg { width: 12px; height: 12px; stroke: currentColor; fill: none; stroke-width: 2; }
+
+    .chip-btn.copied { color: #30d158; border-color: rgba(48, 209, 88, 0.4); }
+
+    /* ---- Interactive playground ---- */
+    .playground { padding: 40px 0 80px; }
+
+    .playground-panel {
+      display: grid;
+      grid-template-columns: 340px 1fr;
+      gap: 0;
+      overflow: hidden;
+      padding: 0;
     }
+
+    .playground-left {
+      padding: 40px 32px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 22px;
+      border-right: 0.5px solid var(--glass-border-bottom);
+    }
+
+    .playground-label {
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--text-secondary);
+    }
+
+    /* Keycap */
+    .keycap {
+      width: 124px;
+      height: 124px;
+      border-radius: 24px;
+      border: none;
+      cursor: pointer;
+      user-select: none;
+      -webkit-user-select: none;
+      touch-action: none;
+      font-family: inherit;
+      position: relative;
+      color: var(--key-text);
+      background: linear-gradient(180deg, var(--key-face-a) 0%, var(--key-face-b) 100%);
+      box-shadow:
+        0 8px 0 0 var(--key-side),
+        0 20px 40px rgba(0, 0, 0, 0.14),
+        inset 0 1.5px 0 rgba(255, 255, 255, 0.65);
+      transition: transform 0.07s ease, box-shadow 0.07s ease;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+    }
+
+    .keycap .key-main { font-size: 30px; font-weight: 600; letter-spacing: -0.02em; line-height: 1; }
+    .keycap .key-sub { font-size: 11px; color: var(--text-secondary); font-weight: 500; }
+
+    .keycap.pressed {
+      transform: translateY(6px);
+      box-shadow:
+        0 2px 0 0 var(--key-side),
+        0 6px 16px rgba(0, 0, 0, 0.12),
+        inset 0 1.5px 0 rgba(255, 255, 255, 0.4);
+    }
+
+    .keycap.pressed .key-main { color: var(--accent); }
+
+    .keycap.shake { animation: shake 0.4s ease; }
+
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      20% { transform: translateX(-6px); }
+      40% { transform: translateX(6px); }
+      60% { transform: translateX(-4px); }
+      80% { transform: translateX(4px); }
+    }
+
+    /* Waveform */
+    .waveform {
+      display: flex;
+      align-items: center;
+      gap: 3px;
+      height: 52px;
+    }
+
+    .waveform .bar {
+      width: 4px;
+      border-radius: 2px;
+      background: var(--accent);
+      height: 14%;
+      opacity: 0.85;
+      transition: background 0.2s;
+    }
+
+    .waveform.idle .bar { background: var(--text-secondary); opacity: 0.35; }
+
+    /* Status */
+    .demo-status {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text-secondary);
+      min-height: 20px;
+    }
+
+    .demo-status .status-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: var(--text-secondary);
+      transition: background 0.2s;
+    }
+
+    .demo-status.recording { color: var(--red); }
+    .demo-status.recording .status-dot { background: var(--red); animation: blink 1.1s ease-in-out infinite; }
+
+    .demo-status.transcribing { color: var(--accent); }
+    .demo-status.transcribing .status-dot { background: var(--accent); animation: blink 0.7s ease-in-out infinite; }
+
+    .demo-status.done { color: #30d158; }
+    .demo-status.done .status-dot { background: #30d158; }
+
+    @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.25; } }
+
+    .demo-timer {
+      font-family: "SF Mono", Menlo, monospace;
+      font-size: 12px;
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* Trigger picker */
+    .trigger-picker {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .trigger-picker button {
+      font-family: inherit;
+      font-size: 12px;
+      font-weight: 500;
+      padding: 6px 12px;
+      border-radius: 980px;
+      border: 0.5px solid var(--glass-border-bottom);
+      background: transparent;
+      color: var(--text-secondary);
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .trigger-picker button:hover { color: var(--text); background: var(--glass-bg-hover); }
+
+    .trigger-picker button.active {
+      background: var(--accent-soft);
+      color: var(--accent);
+      border-color: rgba(0, 113, 227, 0.3);
+    }
+
+    .demo-hint {
+      font-size: 12px;
+      color: var(--text-secondary);
+      text-align: center;
+      max-width: 240px;
+      line-height: 1.5;
+    }
+
+    /* Mock app window */
+    .playground-right {
+      padding: 40px 36px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      background: var(--mock-body);
+    }
+
+    .mock-window {
+      border-radius: 14px;
+      overflow: hidden;
+      border: 0.5px solid var(--glass-border-bottom);
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+      background: var(--bg-elevated);
+    }
+
+    .mock-titlebar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 14px;
+      background: var(--mock-titlebar);
+      border-bottom: 0.5px solid var(--glass-border-bottom);
+    }
+
+    .mock-titlebar .tl { width: 11px; height: 11px; border-radius: 50%; }
+    .mock-titlebar .tl.r { background: #ff5f57; }
+    .mock-titlebar .tl.y { background: #febc2e; }
+    .mock-titlebar .tl.g { background: #28c840; }
+
+    .mock-titlebar .mock-title {
+      margin-left: 8px;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .mock-titlebar .mock-title svg { width: 12px; height: 12px; stroke: var(--text-secondary); fill: none; stroke-width: 2; }
+
+    .mock-body {
+      padding: 20px 22px;
+      min-height: 168px;
+      font-size: 15px;
+      line-height: 1.65;
+      position: relative;
+    }
+
+    .mock-body .placeholder {
+      color: var(--text-secondary);
+      opacity: 0.55;
+      transition: opacity 0.3s;
+    }
+
+    .mock-body.has-text .placeholder { display: none; }
+
+    .mock-body .line {
+      margin-bottom: 12px;
+      animation: lineIn 0.3s ease;
+    }
+
+    @keyframes lineIn {
+      from { opacity: 0; transform: translateY(4px); }
+      to { opacity: 1; transform: none; }
+    }
+
+    .mock-body .caret {
+      display: inline-block;
+      width: 2px;
+      height: 1.1em;
+      background: var(--accent);
+      vertical-align: text-bottom;
+      margin-left: 1px;
+      animation: caretBlink 0.9s steps(1) infinite;
+    }
+
+    @keyframes caretBlink { 0%, 55% { opacity: 1; } 56%, 100% { opacity: 0; } }
+
+    /* ---- Demo video ---- */
+    .demo { text-align: center; padding: 24px 0 90px; }
 
     .demo-window {
       display: inline-block;
-      border-radius: 18px;
+      border-radius: 16px;
       overflow: hidden;
-      padding: 5px;
+      padding: 0;
+      text-align: left;
     }
+
+    .demo-window .mock-titlebar { padding: 12px 16px; }
 
     .demo-window video {
       display: block;
       max-width: 100%;
-      width: 700px;
-      border-radius: 14px;
+      width: 760px;
     }
 
     /* ---- Section heading ---- */
@@ -275,16 +722,27 @@
       margin-bottom: 52px;
     }
 
+    .section-heading .eyebrow {
+      font-size: 13px;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 10px;
+    }
+
     .section-heading h2 {
-      font-size: 40px;
+      font-size: clamp(30px, 4.5vw, 42px);
       font-weight: 700;
       letter-spacing: -0.025em;
-      margin-bottom: 10px;
+      margin-bottom: 12px;
     }
 
     .section-heading p {
       font-size: 18px;
       color: var(--text-secondary);
+      max-width: 560px;
+      margin: 0 auto;
     }
 
     /* ---- Features ---- */
@@ -298,7 +756,29 @@
 
     .security-grid { grid-template-columns: repeat(4, 1fr); }
 
-    .feature-card { padding: 32px 26px; }
+    .feature-card {
+      padding: 32px 26px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .feature-card:hover {
+      background: var(--glass-bg-hover);
+      box-shadow: var(--glass-shadow-lg);
+      transform: translateY(-3px);
+    }
+
+    .feature-card.spot::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(320px circle at var(--mx, 50%) var(--my, 50%), rgba(0, 113, 227, 0.07), transparent 65%);
+      opacity: 0;
+      transition: opacity 0.3s;
+      pointer-events: none;
+    }
+
+    .feature-card.spot:hover::before { opacity: 1; }
 
     .feature-card .icon-wrap {
       width: 44px;
@@ -309,7 +789,10 @@
       align-items: center;
       justify-content: center;
       margin-bottom: 18px;
+      transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
     }
+
+    .feature-card:hover .icon-wrap { transform: scale(1.08) rotate(-3deg); }
 
     .feature-card .icon-wrap svg {
       width: 22px;
@@ -340,27 +823,35 @@
       display: flex;
       gap: 14px;
       justify-content: center;
+      position: relative;
     }
 
     .step {
       text-align: center;
       flex: 1;
-      max-width: 280px;
+      max-width: 300px;
       padding: 40px 28px;
     }
 
+    .step:hover {
+      background: var(--glass-bg-hover);
+      box-shadow: var(--glass-shadow-lg);
+      transform: translateY(-3px);
+    }
+
     .step .num {
-      width: 48px;
-      height: 48px;
-      border-radius: 14px;
-      background: var(--accent);
+      width: 52px;
+      height: 52px;
+      border-radius: 16px;
+      background: linear-gradient(145deg, var(--accent), #5e5ce6);
       color: #fff;
-      font-size: 20px;
+      font-size: 21px;
       font-weight: 700;
       display: inline-flex;
       align-items: center;
       justify-content: center;
       margin-bottom: 20px;
+      box-shadow: 0 4px 16px rgba(0, 113, 227, 0.3);
     }
 
     .step h3 {
@@ -375,32 +866,228 @@
       line-height: 1.5;
     }
 
-    /* ---- Source ---- */
-    .source {
-      padding: 80px 0;
-      text-align: center;
+    /* ---- Tech strip ---- */
+    .tech { padding: 20px 0 80px; }
+
+    .tech-row {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 10px;
     }
 
-    .source .code-panel {
+    .tech-pill {
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text-secondary);
+      padding: 8px 16px;
+      border-radius: 980px;
+      background: var(--glass-bg);
+      border: 0.5px solid var(--glass-border-bottom);
+      transition: all 0.2s;
+    }
+
+    .tech-pill:hover { color: var(--text); background: var(--glass-bg-hover); transform: translateY(-1px); }
+
+    /* ---- FAQ ---- */
+    .faq { padding: 80px 0; }
+
+    .faq-list {
+      max-width: 720px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .faq-item {
+      border-radius: 16px;
+      overflow: hidden;
+    }
+
+    .faq-item summary {
+      list-style: none;
+      cursor: pointer;
+      padding: 20px 24px;
+      font-size: 16px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      transition: background 0.2s;
+    }
+
+    .faq-item summary::-webkit-details-marker { display: none; }
+
+    .faq-item summary:hover { background: var(--glass-bg-hover); }
+
+    .faq-item summary .chev {
+      flex-shrink: 0;
+      width: 14px; height: 14px;
+      stroke: var(--text-secondary);
+      stroke-width: 2.5;
+      fill: none;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      transition: transform 0.25s ease;
+    }
+
+    .faq-item[open] summary .chev { transform: rotate(180deg); }
+
+    .faq-item .faq-body {
+      padding: 0 24px 22px;
+      font-size: 14px;
+      color: var(--text-secondary);
+      line-height: 1.65;
+    }
+
+    .faq-item .faq-body code {
+      font-family: "SF Mono", Menlo, monospace;
+      font-size: 12.5px;
+      background: var(--accent-soft);
+      color: var(--accent);
+      padding: 2px 6px;
+      border-radius: 6px;
+    }
+
+    /* ---- Source ---- */
+    .source { padding: 80px 0; text-align: center; }
+
+    .terminal {
       display: inline-block;
       text-align: left;
-      padding: 22px 28px;
-      font-size: 14px;
-      font-family: "SF Mono", Menlo, monospace;
-      line-height: 1.9;
-      color: var(--text);
+      border-radius: 16px;
+      overflow: hidden;
+      padding: 0;
+      min-width: min(560px, 100%);
     }
 
-    .source .code-panel .p { color: var(--accent); user-select: none; }
+    .terminal .mock-titlebar { position: relative; }
+
+    .terminal .copy-btn {
+      position: absolute;
+      right: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: transparent;
+      border: 0.5px solid var(--glass-border-bottom);
+      border-radius: 7px;
+      color: var(--text-secondary);
+      font-size: 11px;
+      font-weight: 500;
+      font-family: inherit;
+      padding: 4px 10px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      transition: all 0.2s;
+    }
+
+    .terminal .copy-btn:hover { color: var(--text); background: var(--glass-bg-hover); }
+    .terminal .copy-btn.copied { color: #30d158; border-color: rgba(48, 209, 88, 0.4); }
+    .terminal .copy-btn svg { width: 11px; height: 11px; stroke: currentColor; fill: none; stroke-width: 2; }
+
+    .terminal .term-body {
+      padding: 22px 26px;
+      font-size: 14px;
+      font-family: "SF Mono", Menlo, monospace;
+      line-height: 2;
+      color: var(--text);
+      overflow-x: auto;
+      white-space: nowrap;
+    }
+
+    .terminal .term-body .p { color: var(--accent); user-select: none; }
+    .terminal .term-body .c { color: var(--text-secondary); }
+
+    .source .gh-stats {
+      margin-top: 22px;
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    /* ---- Final CTA ---- */
+    .final-cta { padding: 40px 0 100px; }
+
+    .final-cta .panel {
+      text-align: center;
+      padding: 72px 40px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .final-cta .panel::before {
+      content: "";
+      position: absolute;
+      top: -40%; left: 50%;
+      transform: translateX(-50%);
+      width: 600px; height: 400px;
+      background: radial-gradient(ellipse, rgba(0, 113, 227, 0.12), transparent 70%);
+      pointer-events: none;
+    }
+
+    .final-cta h2 {
+      font-size: clamp(28px, 4vw, 38px);
+      font-weight: 700;
+      letter-spacing: -0.025em;
+      margin-bottom: 12px;
+      position: relative;
+    }
+
+    .final-cta p {
+      font-size: 17px;
+      color: var(--text-secondary);
+      margin-bottom: 32px;
+      position: relative;
+    }
+
+    .final-cta .cta-row { position: relative; }
 
     /* ---- Footer ---- */
     footer {
       border-top: 0.5px solid var(--glass-border-bottom);
-      padding: 40px 0;
-      text-align: center;
+      padding: 56px 0 40px;
       font-size: 13px;
       color: var(--text-secondary);
     }
+
+    footer .foot-grid {
+      display: grid;
+      grid-template-columns: 1.4fr 1fr 1fr;
+      gap: 40px;
+      margin-bottom: 40px;
+    }
+
+    footer .brand { display: flex; flex-direction: column; gap: 12px; }
+
+    footer .brand .logo {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      color: var(--text);
+      font-weight: 600;
+      font-size: 15px;
+      text-decoration: none;
+    }
+
+    footer .brand .logo img { width: 24px; height: 24px; border-radius: 6px; }
+
+    footer .brand p { max-width: 300px; line-height: 1.6; }
+
+    footer h4 {
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--text);
+      margin-bottom: 14px;
+    }
+
+    footer ul { list-style: none; display: flex; flex-direction: column; gap: 10px; }
 
     footer a {
       color: var(--text-secondary);
@@ -410,93 +1097,180 @@
 
     footer a:hover { color: var(--text); }
 
-    footer .foot-links {
+    footer .foot-bottom {
+      border-top: 0.5px solid var(--glass-border-bottom);
+      padding-top: 24px;
       display: flex;
-      justify-content: center;
-      gap: 28px;
-      margin-bottom: 12px;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+      flex-wrap: wrap;
     }
 
-    footer .tagline { font-size: 12px; opacity: 0.6; }
+    footer .tagline { font-size: 12px; opacity: 0.7; }
 
     /* ---- Responsive ---- */
-    @media (max-width: 860px) {
+    @media (max-width: 900px) {
+      .playground-panel { grid-template-columns: 1fr; }
+      .playground-left { border-right: none; border-bottom: 0.5px solid var(--glass-border-bottom); }
       .security-grid { grid-template-columns: repeat(2, 1fr); }
+      footer .foot-grid { grid-template-columns: 1fr 1fr; }
     }
 
     @media (max-width: 640px) {
-      .hero { padding: 72px 0 32px; }
-      .hero h1 { font-size: 34px; }
-      .hero .subtitle { font-size: 17px; }
-      .section-heading h2 { font-size: 28px; }
-      .section-heading p { font-size: 16px; }
+      .hero { padding: 56px 0 20px; }
+      nav .nav-links a:not(.nav-cta) { display: none; }
       .features-grid { grid-template-columns: repeat(2, 1fr); }
-      .security-grid { grid-template-columns: repeat(2, 1fr); }
       .steps { flex-direction: column; align-items: center; }
-      .demo-window { border-radius: 14px; padding: 4px; }
-      .demo-window video { border-radius: 12px; }
+      .playground-left, .playground-right { padding: 32px 22px; }
+      footer .foot-grid { grid-template-columns: 1fr; gap: 28px; }
+      footer .foot-bottom { justify-content: center; text-align: center; }
     }
 
     @media (max-width: 420px) {
-      .features-grid { grid-template-columns: 1fr; }
-      .security-grid { grid-template-columns: 1fr; }
+      .features-grid, .security-grid { grid-template-columns: 1fr; }
+    }
+
+    /* ---- Reduced motion ---- */
+    @media (prefers-reduced-motion: reduce) {
+      html { scroll-behavior: auto; }
+      *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+      }
+      .reveal { opacity: 1; transform: none; }
     }
   </style>
 </head>
 <body>
 
-<div class="ambient">
+<div class="ambient" aria-hidden="true">
   <div class="orb orb-1"></div>
   <div class="orb orb-2"></div>
+  <div class="orb orb-3"></div>
 </div>
 
-<nav>
+<nav id="nav">
   <div class="container">
     <a href="/" class="logo">
-      <img src="logo.png" alt="Hold To Talk">
+      <img src="logo.png" alt="Hold To Talk app icon">
       Hold To Talk
     </a>
     <div class="nav-links">
+      <a href="#features">Features</a>
+      <a href="#security">Security</a>
+      <a href="#how">How it works</a>
+      <a href="#faq">FAQ</a>
       <a href="https://github.com/Edamame-Labs/hold-to-talk">GitHub</a>
-      <a href="https://github.com/Edamame-Labs/hold-to-talk/releases/latest/download/HoldToTalk.dmg">Download</a>
+      <a href="https://github.com/Edamame-Labs/hold-to-talk/releases/latest/download/HoldToTalk.dmg" class="nav-cta">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Download
+      </a>
     </div>
   </div>
 </nav>
 
-<section class="hero">
+<header class="hero">
   <div class="container">
-    <img src="logo.png" alt="Hold To Talk" class="app-icon">
-    <h1>Hold To Talk</h1>
-    <p class="subtitle">Voice to text for Apple Silicon Macs. Local Parakeet transcription by default, hardened cloud using your own key when you choose it. Hold a key, speak, release.</p>
-    <a href="https://github.com/Edamame-Labs/hold-to-talk/releases/latest/download/HoldToTalk.dmg" class="cta">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-      Download for Mac
-    </a>
+    <div class="icon-stage">
+      <span class="pulse-ring" aria-hidden="true"></span>
+      <span class="pulse-ring" aria-hidden="true"></span>
+      <img src="logo.png" alt="" class="app-icon">
+    </div>
+    <h1>Hold a key. Speak.<br><span class="grad">Your words, typed.</span></h1>
+    <p class="subtitle">Free, open-source dictation for Apple Silicon Macs. Local Parakeet transcription by default — hardened cloud with your own key when you choose it.</p>
+    <div class="cta-row">
+      <a href="https://github.com/Edamame-Labs/hold-to-talk/releases/latest/download/HoldToTalk.dmg" class="btn btn-primary">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Download for Mac
+      </a>
+      <a href="https://github.com/Edamame-Labs/hold-to-talk" class="btn btn-glass">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 .5C5.65.5.5 5.65.5 12c0 5.08 3.29 9.39 7.86 10.91.58.11.79-.25.79-.55 0-.27-.01-1.17-.02-2.12-3.2.7-3.88-1.36-3.88-1.36-.52-1.33-1.28-1.68-1.28-1.68-1.04-.71.08-.7.08-.7 1.15.08 1.76 1.19 1.76 1.19 1.03 1.76 2.69 1.25 3.35.96.1-.75.4-1.25.72-1.54-2.55-.29-5.24-1.28-5.24-5.69 0-1.26.45-2.28 1.19-3.09-.12-.29-.52-1.46.11-3.05 0 0 .97-.31 3.17 1.18a11 11 0 0 1 5.77 0c2.2-1.49 3.17-1.18 3.17-1.18.63 1.59.23 2.76.11 3.05.74.81 1.19 1.83 1.19 3.09 0 4.42-2.7 5.39-5.26 5.68.41.35.77 1.05.77 2.12 0 1.53-.01 2.76-.01 3.14 0 .3.2.67.8.55A11.51 11.51 0 0 0 23.5 12C23.5 5.65 18.35.5 12 .5z"/></svg>
+        Star on GitHub
+      </a>
+    </div>
     <div class="meta">
-      <span>macOS 15+ &middot; Apple Silicon required &middot; Local by default</span>
-      <span>&middot;</span>
-      <span class="brew">brew install edamame-labs/tap/holdtotalk</span>
+      <span class="pill" id="version-pill" hidden><span class="dot"></span><span id="version-text">Latest</span></span>
+      <span class="pill" id="stars-pill" hidden>
+        <svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+        <span id="stars-text">—</span>
+      </span>
+      <span class="pill">macOS 15+</span>
+      <span class="pill">Apple Silicon</span>
+      <span class="pill">Free &middot; Apache 2.0</span>
+      <button class="chip-btn" data-copy="brew install edamame-labs/tap/holdtotalk" aria-label="Copy Homebrew install command">
+        brew install edamame-labs/tap/holdtotalk
+        <svg viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+      </button>
+    </div>
+  </div>
+</header>
+
+<section class="playground" aria-label="Interactive demo">
+  <div class="container">
+    <div class="playground-panel glass reveal">
+      <div class="playground-left">
+        <span class="playground-label">Try it right here</span>
+        <button class="keycap" id="keycap" aria-describedby="demo-hint">
+          <span class="key-main" id="key-label">fn</span>
+          <span class="key-sub" id="key-sub-label">hold to talk</span>
+        </button>
+        <div class="waveform idle" id="waveform" aria-hidden="true"></div>
+        <div class="demo-status" id="demo-status" role="status" aria-live="polite">
+          <span class="status-dot"></span>
+          <span id="status-text">Hold the key to start</span>
+          <span class="demo-timer" id="demo-timer" hidden>0:00.0</span>
+        </div>
+        <div class="trigger-picker" role="group" aria-label="Choose trigger key">
+          <button class="active" data-key="fn" data-sub="hold to talk">fn</button>
+          <button data-key="&#8997;" data-sub="option">&#8997; option</button>
+          <button data-key="&#8997; space" data-sub="option + space">&#8997; space</button>
+          <button data-key="F13" data-sub="or F14&ndash;F19">F13</button>
+        </div>
+        <p class="demo-hint" id="demo-hint">Press and hold the key — or focus it and hold Space. Release to transcribe.</p>
+      </div>
+      <div class="playground-right">
+        <div class="mock-window">
+          <div class="mock-titlebar">
+            <span class="tl r"></span><span class="tl y"></span><span class="tl g"></span>
+            <span class="mock-title">
+              <svg viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+              <span id="mock-app-name">Notes</span>
+            </span>
+          </div>
+          <div class="mock-body" id="mock-body">
+            <span class="placeholder">Your dictated text appears in whatever app you&rsquo;re using&hellip;</span>
+            <span class="caret" id="caret" hidden></span>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 </section>
 
 <section class="demo">
   <div class="container">
-    <div class="demo-window glass">
-      <video src="demo.mp4" autoplay loop muted playsinline></video>
+    <div class="demo-window glass reveal">
+      <div class="mock-titlebar">
+        <span class="tl r"></span><span class="tl y"></span><span class="tl g"></span>
+        <span class="mock-title">Hold To Talk in action</span>
+      </div>
+      <video src="demo.mp4" autoplay loop muted playsinline aria-label="Screen recording of Hold To Talk dictating text into an app"></video>
     </div>
   </div>
 </section>
 
-<section class="features">
+<section class="features" id="features">
   <div class="container">
-    <div class="section-heading">
+    <div class="section-heading reveal">
+      <div class="eyebrow">Features</div>
       <h2>Why Hold To Talk</h2>
       <p>Built for privacy, speed, and simplicity.</p>
     </div>
     <div class="features-grid">
 
-      <div class="feature-card glass">
+      <div class="feature-card glass spot reveal" style="--d:0s">
         <div class="icon-wrap">
           <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z" fill="none"/><path d="M8 12l2 2 4-4"/></svg>
         </div>
@@ -504,7 +1278,7 @@
         <p>No subscription, no paywall, no black box. Inspect the code, build it yourself, ship it your way.</p>
       </div>
 
-      <div class="feature-card glass">
+      <div class="feature-card glass spot reveal" style="--d:0.06s">
         <div class="icon-wrap">
           <svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
         </div>
@@ -512,7 +1286,7 @@
         <p>Apple Silicon runs Parakeet locally with no account or tracking. Cloud transcription is optional and uses your own API key.</p>
       </div>
 
-      <div class="feature-card glass">
+      <div class="feature-card glass spot reveal" style="--d:0.12s">
         <div class="icon-wrap">
           <svg viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
         </div>
@@ -520,7 +1294,7 @@
         <p>Powered by NVIDIA Parakeet TDT through sherpa-onnx for fast, accurate on-device transcription on Apple Silicon.</p>
       </div>
 
-      <div class="feature-card glass">
+      <div class="feature-card glass spot reveal" style="--d:0s">
         <div class="icon-wrap">
           <svg viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
         </div>
@@ -528,7 +1302,7 @@
         <p>Dictate into Slack, Notes, your IDE, email, or any text field. If you can type there, Hold To Talk works.</p>
       </div>
 
-      <div class="feature-card glass">
+      <div class="feature-card glass spot reveal" style="--d:0.06s">
         <div class="icon-wrap">
           <svg viewBox="0 0 24 24"><path d="M12 2a4 4 0 0 0-4 4v4a4 4 0 0 0 8 0V6a4 4 0 0 0-4-4z"/><path d="M19 10v1a7 7 0 0 1-14 0v-1"/><line x1="12" y1="18" x2="12" y2="22"/></svg>
         </div>
@@ -536,7 +1310,7 @@
         <p>Optional cleanup fixes punctuation and filler words via Apple Intelligence (on-device) or cloud models (OpenAI, Anthropic) with your own key.</p>
       </div>
 
-      <div class="feature-card glass">
+      <div class="feature-card glass spot reveal" style="--d:0.12s">
         <div class="icon-wrap">
           <svg viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
         </div>
@@ -548,15 +1322,16 @@
   </div>
 </section>
 
-<section class="features">
+<section class="features" id="security">
   <div class="container">
-    <div class="section-heading">
-      <h2>Security controls</h2>
-      <p>Cloud features are opt-in and locked down for direct provider connections.</p>
+    <div class="section-heading reveal">
+      <div class="eyebrow">Security</div>
+      <h2>Locked down by design</h2>
+      <p>Cloud features are opt-in and hardened for direct provider connections.</p>
     </div>
     <div class="features-grid security-grid">
 
-      <div class="feature-card glass">
+      <div class="feature-card glass spot reveal" style="--d:0s">
         <div class="icon-wrap">
           <svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
         </div>
@@ -564,7 +1339,7 @@
         <p>OpenAI and Anthropic keys are stored in the macOS Keychain for this Mac only, not in plain text or iCloud Keychain.</p>
       </div>
 
-      <div class="feature-card glass">
+      <div class="feature-card glass spot reveal" style="--d:0.06s">
         <div class="icon-wrap">
           <svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
         </div>
@@ -572,7 +1347,7 @@
         <p>Cloud base URLs must use HTTPS and cannot include embedded credentials, query strings, or fragments.</p>
       </div>
 
-      <div class="feature-card glass">
+      <div class="feature-card glass spot reveal" style="--d:0.12s">
         <div class="icon-wrap">
           <svg viewBox="0 0 24 24"><path d="M4 7h16"/><path d="M4 12h16"/><path d="M4 17h10"/><path d="M18 15l3 3m0-3l-3 3"/></svg>
         </div>
@@ -580,7 +1355,7 @@
         <p>Cloud requests use an ephemeral session with no cookies and no disk cache for audio or transcript traffic.</p>
       </div>
 
-      <div class="feature-card glass">
+      <div class="feature-card glass spot reveal" style="--d:0.18s">
         <div class="icon-wrap">
           <svg viewBox="0 0 24 24"><path d="M3 6h18"/><path d="M7 12h10"/><path d="M10 18h4"/></svg>
         </div>
@@ -592,57 +1367,453 @@
   </div>
 </section>
 
-<section class="how-it-works">
+<section class="how-it-works" id="how">
   <div class="container">
-    <div class="section-heading">
-      <h2>How it works</h2>
-      <p>Three steps. No setup beyond permissions.</p>
+    <div class="section-heading reveal">
+      <div class="eyebrow">How it works</div>
+      <h2>Three steps. That&rsquo;s it.</h2>
+      <p>No setup beyond permissions and a one-time model download.</p>
     </div>
     <div class="steps">
-      <div class="step glass">
+      <div class="step glass reveal" style="--d:0s">
         <div class="num">1</div>
         <h3>Hold</h3>
-        <p>Press and hold your hotkey to start recording</p>
+        <p>Press and hold your hotkey — fn by default — to start recording.</p>
       </div>
-      <div class="step glass">
+      <div class="step glass reveal" style="--d:0.1s">
         <div class="num">2</div>
         <h3>Speak</h3>
-        <p>Say what you want to type while the indicator shows</p>
+        <p>Say what you want to type while the indicator shows.</p>
       </div>
-      <div class="step glass">
+      <div class="step glass reveal" style="--d:0.2s">
         <div class="num">3</div>
         <h3>Release</h3>
-        <p>Let go and your words appear in the active app</p>
+        <p>Let go and your words appear in the active app.</p>
       </div>
     </div>
   </div>
 </section>
 
-<section class="source">
+<section class="tech">
   <div class="container">
-    <div class="section-heading">
-      <h2>Open source</h2>
+    <div class="tech-row reveal" aria-label="Built with">
+      <span class="tech-pill">Parakeet TDT 0.6B</span>
+      <span class="tech-pill">sherpa-onnx</span>
+      <span class="tech-pill">Silero VAD</span>
+      <span class="tech-pill">Apple Intelligence</span>
+      <span class="tech-pill">SwiftUI</span>
+      <span class="tech-pill">Sparkle updates</span>
+      <span class="tech-pill">Apache 2.0</span>
+    </div>
+  </div>
+</section>
+
+<section class="faq" id="faq">
+  <div class="container">
+    <div class="section-heading reveal">
+      <div class="eyebrow">FAQ</div>
+      <h2>Questions, answered</h2>
+    </div>
+    <div class="faq-list">
+
+      <details class="faq-item glass reveal" style="--d:0s">
+        <summary>Is it really free?<svg class="chev" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg></summary>
+        <div class="faq-body">Yes — free and open-source under Apache 2.0. No accounts, no subscriptions, no telemetry. Optional cloud transcription and cleanup use your own provider keys, billed directly by your provider only if you enable them.</div>
+      </details>
+
+      <details class="faq-item glass reveal" style="--d:0.04s">
+        <summary>Does it work offline?<svg class="chev" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg></summary>
+        <div class="faq-body">Yes. The Parakeet TDT 0.6B model downloads once (~640 MB) and then runs fully on your Mac. No network connection is needed for local dictation.</div>
+      </details>
+
+      <details class="faq-item glass reveal" style="--d:0.08s">
+        <summary>Which languages are supported?<svg class="chev" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg></summary>
+        <div class="faq-body">The bundled Parakeet TDT 0.6B v2 model is English-only. Optional text cleanup through Apple Intelligence or your own cloud provider can further polish the English output.</div>
+      </details>
+
+      <details class="faq-item glass reveal" style="--d:0.12s">
+        <summary>Which Macs are supported?<svg class="chev" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg></summary>
+        <div class="faq-body">macOS 15 or later on Apple Silicon (M1 and newer). Local transcription relies on Apple Silicon performance, so Intel Macs are not supported.</div>
+      </details>
+
+      <details class="faq-item glass reveal" style="--d:0.16s">
+        <summary>What permissions does it need?<svg class="chev" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg></summary>
+        <div class="faq-body">Two: <code>Microphone</code> to hear you, and <code>Accessibility</code> (PostEvent) to type dictated text into other apps. Hotkeys are registered through the system hotkey API — no Input Monitoring permission required.</div>
+      </details>
+
+      <details class="faq-item glass reveal" style="--d:0.2s">
+        <summary>Where does my audio go?<svg class="chev" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg></summary>
+        <div class="faq-body">Nowhere, by default — local transcription never leaves your Mac. If you opt into cloud transcription, audio goes directly from your Mac to the HTTPS provider endpoint you configure. There are no Hold To Talk servers, and cloud sessions use no cookies or disk cache.</div>
+      </details>
+
+    </div>
+  </div>
+</section>
+
+<section class="source" id="opensource">
+  <div class="container">
+    <div class="section-heading reveal">
+      <div class="eyebrow">Open source</div>
+      <h2>Inspect every line</h2>
       <p>Apache 2.0 licensed. Easy to inspect, fork, and build yourself.</p>
     </div>
-    <div class="code-panel glass">
-      <span class="p">$</span> git clone https://github.com/Edamame-Labs/hold-to-talk.git<br>
-      <span class="p">$</span> cd hold-to-talk<br>
-      <span class="p">$</span> make build &amp;&amp; make run
+    <div class="terminal glass reveal">
+      <div class="mock-titlebar">
+        <span class="tl r"></span><span class="tl y"></span><span class="tl g"></span>
+        <span class="mock-title">Terminal</span>
+        <button class="copy-btn" data-copy="git clone https://github.com/Edamame-Labs/hold-to-talk.git && cd hold-to-talk && make build && make run" aria-label="Copy build commands">
+          <svg viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+          Copy
+        </button>
+      </div>
+      <div class="term-body">
+        <span class="p">$</span> git clone https://github.com/Edamame-Labs/hold-to-talk.git<br>
+        <span class="p">$</span> cd hold-to-talk<br>
+        <span class="p">$</span> make build &amp;&amp; make run<br>
+        <span class="c"># or: brew install edamame-labs/tap/holdtotalk</span>
+      </div>
+    </div>
+    <div class="gh-stats reveal">
+      <span class="pill" id="stars-pill-2" hidden>
+        <svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+        <span id="stars-text-2">—</span>&nbsp;stars
+      </span>
+      <a class="pill" href="https://github.com/Edamame-Labs/hold-to-talk/blob/main/LICENSE" style="text-decoration:none; color:inherit;">Apache 2.0 license</a>
+      <a class="pill" href="https://github.com/Edamame-Labs/hold-to-talk/releases/latest" style="text-decoration:none; color:inherit;">Release notes</a>
+    </div>
+  </div>
+</section>
+
+<section class="final-cta">
+  <div class="container">
+    <div class="panel glass reveal">
+      <h2>Ready to talk to your Mac?</h2>
+      <p>Free forever. Two minutes to set up.</p>
+      <div class="cta-row" style="display:flex; gap:12px; justify-content:center; flex-wrap:wrap;">
+        <a href="https://github.com/Edamame-Labs/hold-to-talk/releases/latest/download/HoldToTalk.dmg" class="btn btn-primary">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Download for Mac
+        </a>
+        <button class="btn btn-glass chip-btn-lg" data-copy="brew install edamame-labs/tap/holdtotalk" style="font-family:'SF Mono',Menlo,monospace; font-size:14px;">
+          brew install edamame-labs/tap/holdtotalk
+        </button>
+      </div>
     </div>
   </div>
 </section>
 
 <footer>
   <div class="container">
-    <div class="foot-links">
-      <a href="https://github.com/Edamame-Labs/hold-to-talk">GitHub</a>
-      <a href="https://github.com/Edamame-Labs/hold-to-talk/releases/latest">Releases</a>
-      <a href="https://github.com/Edamame-Labs/hold-to-talk/blob/main/LICENSE">Apache 2.0</a>
-      <a href="privacy.html">Privacy</a>
+    <div class="foot-grid">
+      <div class="brand">
+        <a href="/" class="logo"><img src="logo.png" alt="">Hold To Talk</a>
+        <p>Free, open-source, local-first dictation for Apple Silicon Macs. Hold a key, speak, release.</p>
+      </div>
+      <div>
+        <h4>Product</h4>
+        <ul>
+          <li><a href="https://github.com/Edamame-Labs/hold-to-talk/releases/latest/download/HoldToTalk.dmg">Download</a></li>
+          <li><a href="https://github.com/Edamame-Labs/hold-to-talk/releases/latest">Release notes</a></li>
+          <li><a href="#features">Features</a></li>
+          <li><a href="#faq">FAQ</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4>Resources</h4>
+        <ul>
+          <li><a href="https://github.com/Edamame-Labs/hold-to-talk">GitHub</a></li>
+          <li><a href="https://github.com/Edamame-Labs/hold-to-talk/blob/main/LICENSE">Apache 2.0 license</a></li>
+          <li><a href="privacy.html">Privacy</a></li>
+          <li><a href="https://github.com/Edamame-Labs/hold-to-talk/tree/main/docs/enterprise">Enterprise deployment</a></li>
+        </ul>
+      </div>
     </div>
-    <p class="tagline">Hold To Talk is free, open-source, and local-first software for Mac. Cloud features use your own API keys.</p>
+    <div class="foot-bottom">
+      <span class="tagline">Hold To Talk is free, open-source software. Cloud features use your own API keys.</span>
+      <span class="tagline">macOS 15+ &middot; Apple Silicon</span>
+    </div>
   </div>
 </footer>
+
+<script>
+(function () {
+  "use strict";
+  var reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  var finePointer = window.matchMedia("(pointer: fine)").matches;
+
+  /* ---------- Nav scroll state ---------- */
+  var nav = document.getElementById("nav");
+  function onScroll() { nav.classList.toggle("scrolled", window.scrollY > 8); }
+  window.addEventListener("scroll", onScroll, { passive: true });
+  onScroll();
+
+  /* ---------- Reveal on scroll ---------- */
+  var revealEls = document.querySelectorAll(".reveal");
+  if ("IntersectionObserver" in window && !reduceMotion) {
+    var io = new IntersectionObserver(function (entries) {
+      entries.forEach(function (e) {
+        if (e.isIntersecting) { e.target.classList.add("in"); io.unobserve(e.target); }
+      });
+    }, { threshold: 0.12, rootMargin: "0px 0px -40px 0px" });
+    revealEls.forEach(function (el) { io.observe(el); });
+  } else {
+    revealEls.forEach(function (el) { el.classList.add("in"); });
+  }
+
+  /* ---------- Spotlight cards ---------- */
+  if (finePointer && !reduceMotion) {
+    document.querySelectorAll(".spot").forEach(function (card) {
+      card.addEventListener("pointermove", function (e) {
+        var r = card.getBoundingClientRect();
+        card.style.setProperty("--mx", (e.clientX - r.left) + "px");
+        card.style.setProperty("--my", (e.clientY - r.top) + "px");
+      });
+    });
+  }
+
+  /* ---------- Copy buttons ---------- */
+  function copyText(text, done) {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(done, function () { legacyCopy(text, done); });
+    } else {
+      legacyCopy(text, done);
+    }
+  }
+  function legacyCopy(text, done) {
+    var ta = document.createElement("textarea");
+    ta.value = text;
+    ta.style.position = "fixed";
+    ta.style.opacity = "0";
+    document.body.appendChild(ta);
+    ta.select();
+    try { if (document.execCommand("copy")) done(); } catch (err) {}
+    document.body.removeChild(ta);
+  }
+  document.querySelectorAll("[data-copy]").forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      copyText(btn.getAttribute("data-copy"), function () {
+        btn.classList.add("copied");
+        setTimeout(function () { btn.classList.remove("copied"); }, 1600);
+      });
+    });
+  });
+
+  /* ---------- GitHub stats (graceful fallback) ---------- */
+  function formatCount(n) {
+    return n >= 1000 ? (n / 1000).toFixed(1).replace(/\.0$/, "") + "k" : String(n);
+  }
+  fetch("https://api.github.com/repos/Edamame-Labs/hold-to-talk", { headers: { "Accept": "application/vnd.github+json" } })
+    .then(function (r) { return r.ok ? r.json() : null; })
+    .then(function (data) {
+      if (!data) return;
+      if (typeof data.stargazers_count === "number") {
+        ["stars-pill", "stars-pill-2"].forEach(function (id) { document.getElementById(id).hidden = false; });
+        document.getElementById("stars-text").textContent = formatCount(data.stargazers_count);
+        document.getElementById("stars-text-2").textContent = formatCount(data.stargazers_count);
+      }
+    })
+    .catch(function () {});
+  fetch("https://api.github.com/repos/Edamame-Labs/hold-to-talk/releases/latest", { headers: { "Accept": "application/vnd.github+json" } })
+    .then(function (r) { return r.ok ? r.json() : null; })
+    .then(function (data) {
+      if (data && data.tag_name) {
+        document.getElementById("version-text").textContent = data.tag_name;
+        document.getElementById("version-pill").hidden = false;
+      }
+    })
+    .catch(function () {});
+
+  /* ---------- Interactive hold-to-talk demo ---------- */
+  var keycap = document.getElementById("keycap");
+  var waveform = document.getElementById("waveform");
+  var statusEl = document.getElementById("demo-status");
+  var statusText = document.getElementById("status-text");
+  var timerEl = document.getElementById("demo-timer");
+  var mockBody = document.getElementById("mock-body");
+  var mockAppName = document.getElementById("mock-app-name");
+  var caret = document.getElementById("caret");
+
+  var BAR_COUNT = 30;
+  var bars = [];
+  for (var i = 0; i < BAR_COUNT; i++) {
+    var bar = document.createElement("span");
+    bar.className = "bar";
+    waveform.appendChild(bar);
+    bars.push(bar);
+  }
+
+  var phrases = [
+    "Hey team — the release build is green and ready for review.",
+    "Remind me to send Sarah the launch checklist before Friday.",
+    "Honestly, this is so much faster than typing.",
+    "Meeting notes: ship on Tuesday, update the docs, post in Slack."
+  ];
+  var apps = ["Notes", "Slack", "VS Code", "Mail"];
+  var phraseIdx = 0, appIdx = 0;
+
+  var state = "idle"; // idle | recording | transcribing | typing
+  var pressStart = 0;
+  var amp = 0.12, ampTarget = 0.12;
+  var rafId = null;
+  var timerInterval = null;
+
+  function setStatus(mode, text) {
+    statusEl.className = "demo-status" + (mode ? " " + mode : "");
+    statusText.textContent = text;
+  }
+
+  function formatTimer(ms) {
+    var s = ms / 1000;
+    var m = Math.floor(s / 60);
+    var sec = (s % 60).toFixed(1);
+    return m + ":" + (sec < 10 ? "0" : "") + sec;
+  }
+
+  /* Waveform render loop */
+  var t0 = performance.now();
+  function renderWave(now) {
+    var t = (now - t0) / 1000;
+    amp += (ampTarget - amp) * 0.12;
+    for (var i = 0; i < bars.length; i++) {
+      var n = Math.abs(Math.sin(t * 5.2 + i * 0.62)) * (0.55 + 0.45 * Math.sin(t * 1.7 + i * 1.31));
+      var jitter = state === "recording" ? Math.abs(Math.sin(t * 13 + i * 2.4)) * 0.35 : 0;
+      var h = 10 + amp * (n + jitter) * 88;
+      bars[i].style.height = Math.min(h, 100) + "%";
+    }
+    rafId = requestAnimationFrame(renderWave);
+  }
+  if (!reduceMotion) {
+    rafId = requestAnimationFrame(renderWave);
+    document.addEventListener("visibilitychange", function () {
+      if (document.hidden) { cancelAnimationFrame(rafId); rafId = null; }
+      else if (!rafId) { t0 = performance.now() - 1000; rafId = requestAnimationFrame(renderWave); }
+    });
+  }
+
+  function startRecording() {
+    if (state !== "idle") return;
+    state = "recording";
+    pressStart = performance.now();
+    keycap.classList.add("pressed");
+    waveform.classList.remove("idle");
+    ampTarget = 1;
+    timerEl.hidden = false;
+    timerEl.textContent = "0:00.0";
+    timerInterval = setInterval(function () {
+      timerEl.textContent = formatTimer(performance.now() - pressStart);
+    }, 100);
+    setStatus("recording", "Listening…");
+  }
+
+  function stopRecording() {
+    if (state !== "recording") return;
+    var held = performance.now() - pressStart;
+    clearInterval(timerInterval);
+    keycap.classList.remove("pressed");
+    ampTarget = 0.12;
+    waveform.classList.add("idle");
+    timerEl.hidden = true;
+
+    if (held < 350) {
+      state = "idle";
+      setStatus("", "Keep holding while you speak");
+      keycap.classList.add("shake");
+      setTimeout(function () { keycap.classList.remove("shake"); }, 450);
+      setTimeout(function () {
+        if (state === "idle") setStatus("", "Hold the key to start");
+      }, 2200);
+      return;
+    }
+
+    state = "transcribing";
+    setStatus("transcribing", "Transcribing…");
+    setTimeout(transcribe, reduceMotion ? 100 : 750);
+  }
+
+  function transcribe() {
+    state = "typing";
+    var phrase = phrases[phraseIdx % phrases.length];
+    phraseIdx++;
+    var app = apps[appIdx % apps.length];
+    appIdx++;
+    mockAppName.textContent = app;
+    mockBody.classList.add("has-text");
+
+    var line = document.createElement("p");
+    line.className = "line";
+    mockBody.insertBefore(line, caret);
+    caret.hidden = false;
+
+    var lines = mockBody.querySelectorAll(".line");
+    while (lines.length > 3) {
+      mockBody.removeChild(lines[0]);
+      lines = mockBody.querySelectorAll(".line");
+    }
+
+    setStatus("transcribing", "Inserting into " + app + "…");
+
+    if (reduceMotion) {
+      line.textContent = phrase;
+      finishTyping(app, phrase);
+      return;
+    }
+
+    var i = 0;
+    (function typeChar() {
+      if (i < phrase.length) {
+        line.textContent += phrase.charAt(i);
+        i++;
+        setTimeout(typeChar, 14 + Math.random() * 22);
+      } else {
+        finishTyping(app, phrase);
+      }
+    })();
+  }
+
+  function finishTyping(app, phrase) {
+    caret.hidden = true;
+    state = "idle";
+    setStatus("done", "Inserted into " + app);
+    setTimeout(function () {
+      if (state === "idle") setStatus("", "Hold the key to start");
+    }, 2600);
+  }
+
+  /* Pointer interaction */
+  keycap.addEventListener("pointerdown", function (e) {
+    e.preventDefault();
+    try { keycap.setPointerCapture(e.pointerId); } catch (err) {}
+    startRecording();
+  });
+  keycap.addEventListener("pointerup", stopRecording);
+  keycap.addEventListener("pointercancel", stopRecording);
+  keycap.addEventListener("contextmenu", function (e) { e.preventDefault(); });
+
+  /* Keyboard interaction: hold Space or Enter */
+  keycap.addEventListener("keydown", function (e) {
+    if ((e.code === "Space" || e.code === "Enter") && !e.repeat) {
+      e.preventDefault();
+      startRecording();
+    }
+  });
+  keycap.addEventListener("keyup", function (e) {
+    if (e.code === "Space" || e.code === "Enter") {
+      e.preventDefault();
+      stopRecording();
+    }
+  });
+
+  /* Trigger picker */
+  document.querySelectorAll(".trigger-picker button").forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      document.querySelectorAll(".trigger-picker button").forEach(function (b) { b.classList.remove("active"); });
+      btn.classList.add("active");
+      document.getElementById("key-label").innerHTML = btn.getAttribute("data-key");
+      document.getElementById("key-sub-label").innerHTML = btn.getAttribute("data-sub");
+    });
+  });
+})();
+</script>
 
 </body>
 </html>
