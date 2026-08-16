@@ -24,6 +24,26 @@ final class SystemSettingsHelperTests: XCTestCase {
         XCTAssertFalse(didPostTestEvent)
     }
 
+    func testCheckPostEventAccessIsPassiveByDefault() {
+        var preflightCalls = 0
+        var accessibilityCalls = 0
+
+        XCTAssertFalse(
+            checkPostEventAccess(
+                preflight: {
+                    preflightCalls += 1
+                    return false
+                },
+                accessibilityTrusted: {
+                    accessibilityCalls += 1
+                    return false
+                }
+            )
+        )
+        XCTAssertEqual(preflightCalls, 1)
+        XCTAssertEqual(accessibilityCalls, 1)
+    }
+
     func testCheckPostEventAccessRetriesSignalsAfterTestEvent() {
         var preflightCalls = 0
         var didPostTestEvent = false

@@ -19,6 +19,10 @@ struct HotkeySelectionView: View {
         hotkey.modifierSide
     }
 
+    private var conflictWarning: String? {
+        hotkey.conflictWarning
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             Picker(keyLabel, selection: kindBinding) {
@@ -36,6 +40,18 @@ struct HotkeySelectionView: View {
                 }
                 .pickerStyle(.segmented)
                 .controlSize(.small)
+            }
+
+            if let conflictWarning {
+                Label {
+                    Text(conflictWarning)
+                        .fixedSize(horizontal: false, vertical: true)
+                } icon: {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                }
+                .font(.caption)
+                .foregroundStyle(.orange)
+                .accessibilityIdentifier("hotkey-conflict-warning")
             }
         }
         .frame(maxWidth: maxWidth, alignment: .leading)
