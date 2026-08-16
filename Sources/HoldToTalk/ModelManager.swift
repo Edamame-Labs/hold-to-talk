@@ -29,6 +29,7 @@ final class ModelManager: ObservableObject {
     @Published var downloadError: String?
 
     private var downloadTask: Task<Void, Never>?
+    private var downloadGeneration = 0
 
     nonisolated static let modelBase: URL = {
         let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
@@ -58,6 +59,7 @@ final class ModelManager: ObservableObject {
     }
 
     func handleFreshOnboardingReset() {
+        downloadGeneration += 1
         downloadTask?.cancel()
         downloadTask = nil
         isDownloading = false
@@ -68,6 +70,8 @@ final class ModelManager: ObservableObject {
 
     func download() {
         guard !isDownloading else { return }
+        downloadGeneration += 1
+        let generation = downloadGeneration
         isDownloading = true
         downloadProgress = 0
         downloadError = nil
@@ -75,7 +79,7 @@ final class ModelManager: ObservableObject {
         let task = Task { [weak self] in
             guard let self else { return }
             do {
-                let tempFileURL = try await self.downloadArchive()
+                let tempFileURL = try await self.downloadArchive(generation: generation)
                 defer { try? FileManager.default.removeItem(at: tempFileURL) }
                 if Task.isCancelled { return }
                 try await Task.detached(priority: .utility) {
@@ -83,17 +87,22 @@ final class ModelManager: ObservableObject {
                 }.value
                 try await self.extractArchive(tempFileURL)
                 if !Task.isCancelled {
-                    await MainActor.run { self.isDownloaded = true }
+                    await MainActor.run {
+                        guard self.downloadGeneration == generation else { return }
+                        self.isDownloaded = true
+                    }
                 }
             } catch {
                 if !Task.isCancelled {
                     await MainActor.run {
+                        guard self.downloadGeneration == generation else { return }
                         self.downloadError = self.userFacingDownloadError(error)
                     }
                     print("[modelmanager] Download failed: \(error)")
                 }
             }
             await MainActor.run {
+                guard self.downloadGeneration == generation else { return }
                 self.isDownloading = false
                 self.downloadProgress = 0
                 self.downloadTask = nil
@@ -103,6 +112,7 @@ final class ModelManager: ObservableObject {
     }
 
     func cancelDownload() {
+        downloadGeneration += 1
         downloadTask?.cancel()
         downloadTask = nil
         isDownloading = false
@@ -251,12 +261,13 @@ final class ModelManager: ObservableObject {
             .map(String.init)
     }
 
-    private func downloadArchive() async throws -> URL {
+    private func downloadArchive(generation: Int) async throws -> URL {
         let (tempURL, _) = try await URLSession.shared.download(
             from: SpeechModelInfo.downloadURL,
             delegate: DownloadProgressDelegate { [weak self] fraction in
                 Task { @MainActor [weak self] in
-                    self?.downloadProgress = fraction
+                    guard let self, self.downloadGeneration == generation else { return }
+                    self.downloadProgress = fraction
                 }
             }
         )
