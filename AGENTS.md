@@ -1,42 +1,6 @@
-# CLAUDE.md
+# AGENTS.md
 
 This file is for AI/code agents working in this repository. Keep changes grounded in the current SwiftPM app structure; this is not an Xcode-project repo.
-
-## Agent Behavior
-
-These guidelines are adapted from the `multica-ai/andrej-karpathy-skills` CLAUDE.md and merged with this repo's project-specific instructions. They bias toward caution over speed; use judgment for trivial tasks.
-
-### Think Before Coding
-
-- Do not assume requirements that are not in the request or visible in the code.
-- State assumptions when they affect implementation.
-- If multiple interpretations are plausible, surface them instead of silently choosing a risky path.
-- If a simpler approach solves the problem, say so and use it.
-- If something is unclear enough to risk the wrong change, stop and ask a focused question.
-
-### Simplicity First
-
-- Write the minimum code that solves the requested problem.
-- Do not add speculative features, configuration, flexibility, or abstractions.
-- Do not add defensive handling for impossible states unless this repo already handles that class of failure.
-- If a change is getting large, re-check whether a smaller fix would satisfy the goal.
-
-### Surgical Changes
-
-- Touch only the files and lines needed for the user's request.
-- Do not refactor, reformat, or "improve" adjacent code unless it is required for the task.
-- Match existing style even when another style would also be reasonable.
-- Remove imports, variables, functions, and files made unused by your own change.
-- Do not remove pre-existing dead code or unrelated artifacts unless explicitly asked; mention them instead.
-- Every changed line should trace back to the user's request.
-
-### Goal-Driven Execution
-
-- Convert non-trivial tasks into verifiable success criteria before editing.
-- For bug fixes, prefer a failing test or clear reproduction first, then make it pass.
-- For validation or behavior changes, cover the important invalid and valid cases where practical.
-- For refactors, verify behavior before and after with the relevant tests.
-- Loop until the change is implemented and verified, or clearly report the blocker.
 
 ## Project Overview
 
@@ -65,43 +29,43 @@ Core product constraints:
 ## Important Paths
 
 ```text
-Package.swift                         SwiftPM targets, Sparkle conditional dependency
-Makefile                              Local build, app assembly, signing, packaging, reset helpers
-Sources/HoldToTalk/                   Main macOS app
-Sources/HoldToTalk/Resources/         SwiftPM-copied runtime resources
-Sources/TranscribeCmd/                CLI tool for transcription experiments/evaluation
-Tests/HoldToTalkTests/                Unit tests for security, onboarding, compatibility, insertion, ASR helpers
-Resources/                            App bundle resources, entitlements, Info.plist, icons, privacy manifest
-scripts/setup-sherpa-onnx.sh          Downloads/prepares sherpa-onnx xcframework
-scripts/reset-fresh-test.sh           Removes installs/state and resets permissions
-scripts/package-dmg.sh                Direct-distribution DMG packaging
-evaluation/                           Manual WER/evaluation helpers
-docs/                                 GitHub Pages site, appcast, privacy page, enterprise docs
-Casks/holdtotalk.rb                   Template used by release workflow for Homebrew tap
-.github/workflows/                    CI, direct release, App Store upload
+Package.swift SwiftPM targets, Sparkle conditional dependency
+Makefile Local build, app assembly, signing, packaging, reset helpers
+Sources/HoldToTalk/ Main macOS app
+Sources/HoldToTalk/Resources/ SwiftPM-copied runtime resources
+Sources/TranscribeCmd/ CLI tool for transcription experiments/evaluation
+Tests/HoldToTalkTests/ Unit tests for security, onboarding, compatibility, insertion, ASR helpers
+Resources/ App bundle resources, entitlements, Info.plist, icons, privacy manifest
+scripts/setup-sherpa-onnx.sh Downloads/prepares sherpa-onnx xcframework
+scripts/reset-fresh-test.sh Removes installs/state and resets permissions
+scripts/package-dmg.sh Direct-distribution DMG packaging
+evaluation/ Manual WER/evaluation helpers
+docs/ GitHub Pages site, appcast, privacy page, enterprise docs
+Casks/holdtotalk.rb Template used by release workflow for Homebrew tap
+.github/workflows/ CI, direct release, App Store upload
 ```
 
-Generated or local-only paths are ignored by git: `.build/`, `Frameworks/`, `.claude/`, `demo-video/`, `dist/`, app bundles, `.DS_Store`.
+Generated or local-only paths are ignored by git: `.build/`, `Frameworks/`, `.Codex/`, `demo-video/`, `dist/`, app bundles, `.DS_Store`.
 
 ## Commands
 
 ```bash
-make setup                         # Download sherpa-onnx xcframework into Frameworks/
-swift build                        # Debug SwiftPM build; setup must already have run
-swift build -c release             # Release SwiftPM build
-swift test                         # Run all tests
+make setup # Download sherpa-onnx xcframework into Frameworks/
+swift build # Debug SwiftPM build; setup must already have run
+swift build -c release # Release SwiftPM build
+swift test # Run all tests
 
-make build                         # Release build + assemble .build/Hold To Talk.app
-make run                           # Debug build + assemble .app + open it
-make install                       # Build and copy to /Applications
-make verify                        # Build, codesign verify, and spctl if not ad-hoc signed
-make package                       # Direct-distribution zip + dmg; requires APP_STORE != 1
-make release                       # Sign, notarize app, package zip/dmg, notarize dmg
-make clean                         # swift package clean + remove app/dist/staging artifacts
+make build # Release build + assemble .build/Hold To Talk.app
+make run # Debug build + assemble .app + open it
+make install # Build and copy to /Applications
+make verify # Build, codesign verify, and spctl if not ad-hoc signed
+make package # Direct-distribution zip + dmg; requires APP_STORE != 1
+make release # Sign, notarize app, package zip/dmg, notarize dmg
+make clean # swift package clean + remove app/dist/staging artifacts
 
-make test-reset                    # Kill app, remove installs/data, reset permissions
-make reset-fresh-test              # Same script, configurable via ARGS
-make permissions-reset             # Reset TCC permissions only
+make test-reset # Kill app, remove installs/data, reset permissions
+make reset-fresh-test # Same script, configurable via ARGS
+make permissions-reset # Reset TCC permissions only
 tccutil reset Microphone com.holdtotalk.app
 tccutil reset Accessibility com.holdtotalk.app
 tccutil reset ListenEvent com.holdtotalk.app
@@ -124,14 +88,14 @@ The main dictation path is:
 
 ```text
 HotkeyManager
-  -> DictationEngine.beginRecording()
-    -> AudioRecorder.start()
-  -> DictationEngine.endRecording()
-    -> AudioRecorder.stop() -> 16 kHz mono Float audio
-    -> Transcriber OR CloudTranscriber
-    -> TextCleanup OR CloudTextCleanup
-    -> TextInserter
-    -> target app
+ -> DictationEngine.beginRecording()
+ -> AudioRecorder.start()
+ -> DictationEngine.endRecording()
+ -> AudioRecorder.stop() -> 16 kHz mono Float audio
+ -> Transcriber OR CloudTranscriber
+ -> TextCleanup OR CloudTextCleanup
+ -> TextInserter
+ -> target app
 ```
 
 Responsibilities:
@@ -206,7 +170,7 @@ python3 evaluation/evaluate.py report
 
 - `.github/workflows/build.yml`: on push/PR to `main`, runs setup, `swift test`, `APP_STORE=1 make build`, and direct `make build`.
 - `.github/workflows/release.yml`: tag/workflow direct release; tests, stamps version, imports Developer ID cert, `make release`, publishes GitHub Release artifacts, updates Homebrew tap, generates Sparkle appcast, commits release metadata back to `main`.
-- `.github/workflows/release-appstore.yml`: manual App Store build/upload; tests, stamps version/build, signs with App Store certificate/profile, packages `.pkg`, uploads to App Store Connect.
+- `.github/workflows/release-appstore.yml`: manual App Store build/upload; tests, stamps version/build, signs with App Store certificate/profile, packages a `.pkg`, uploads to App Store Connect.
 
 Be careful editing release workflow paths and repository slugs. The public README and some templates historically use both `hold-to-talk` and `holdtotalk` forms; verify actual URLs before changing release automation.
 
