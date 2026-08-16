@@ -145,6 +145,27 @@ final class OnboardingResetHelperTests: XCTestCase {
         XCTAssertEqual(defaults.string(forKey: onboardingCompletedAppPathDefaultsKey), appURL.path)
     }
 
+    func testPreparingForAppMoveResumesAtPermissionsAfterRelaunch() {
+        let defaults = UserDefaults(suiteName: #function)!
+        defer { defaults.removePersistentDomain(forName: #function) }
+
+        prepareOnboardingToResumeAfterAppMove(defaults: defaults)
+
+        XCTAssertTrue(defaults.bool(forKey: onboardingNeedsResumeAfterAppMoveDefaultsKey))
+        XCTAssertEqual(defaults.integer(forKey: onboardingStepDefaultsKey), 1)
+    }
+
+    func testFailedAppMoveReturnsOnboardingToInstallStep() {
+        let defaults = UserDefaults(suiteName: #function)!
+        defer { defaults.removePersistentDomain(forName: #function) }
+
+        prepareOnboardingToResumeAfterAppMove(defaults: defaults)
+        cancelOnboardingResumeAfterFailedAppMove(defaults: defaults)
+
+        XCTAssertFalse(defaults.bool(forKey: onboardingNeedsResumeAfterAppMoveDefaultsKey))
+        XCTAssertEqual(defaults.integer(forKey: onboardingStepDefaultsKey), 0)
+    }
+
     func testCompletedOnboardingRequiresLocalModelOnlyForLocalTranscription() {
         let defaults = UserDefaults(suiteName: #function)!
         defer { defaults.removePersistentDomain(forName: #function) }

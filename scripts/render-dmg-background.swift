@@ -205,7 +205,7 @@ func drawTitle(in rect: CGRect) {
   style.alignment = .center
 
   let title = NSAttributedString(
-    string: "Drag HoldToTalk to Applications",
+    string: "Drag Hold to Talk to Applications",
     attributes: [
       .font: NSFont.systemFont(ofSize: 34, weight: .bold),
       .foregroundColor: NSColor(calibratedRed: 0.164, green: 0.148, blue: 0.132, alpha: 1.0),
@@ -214,7 +214,7 @@ func drawTitle(in rect: CGRect) {
   )
 
   let subtitle = NSAttributedString(
-    string: "After the drag, open HoldToTalk from Applications.",
+    string: "Drag the app into Applications, then open it there.",
     attributes: [
       .font: NSFont.systemFont(ofSize: 17, weight: .medium),
       .foregroundColor: NSColor(calibratedRed: 0.314, green: 0.286, blue: 0.255, alpha: 0.92),
@@ -223,7 +223,7 @@ func drawTitle(in rect: CGRect) {
   )
 
   let footer = NSAttributedString(
-    string: "Do not open the copy inside this disk image.",
+    string: "Open the copy in Applications to get started.",
     attributes: [
       .font: NSFont.systemFont(ofSize: 13, weight: .medium),
       .foregroundColor: NSColor(calibratedRed: 0.427, green: 0.384, blue: 0.333, alpha: 0.88),

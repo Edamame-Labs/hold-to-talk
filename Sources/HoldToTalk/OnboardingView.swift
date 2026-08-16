@@ -129,26 +129,34 @@ struct OnboardingView: View {
     }
 
     var body: some View {
+        let needsInstallation = !isInstalledInApplicationsFolder()
+
         VStack(spacing: 0) {
-            HStack(spacing: 8) {
-                ForEach(0..<5) { i in
-                    Capsule()
-                        .fill(i <= step ? Color.accentColor : Color.secondary.opacity(0.25))
-                        .frame(height: 4)
+            if !needsInstallation {
+                HStack(spacing: 8) {
+                    ForEach(0..<5) { i in
+                        Capsule()
+                            .fill(i <= step ? Color.accentColor : Color.secondary.opacity(0.25))
+                            .frame(height: 4)
+                    }
                 }
+                .padding(.horizontal, 32)
+                .padding(.top, 20)
             }
-            .padding(.horizontal, 32)
-            .padding(.top, 20)
 
             Spacer()
 
             Group {
-                switch step {
-                case 0: welcomeStep
-                case 1: permissionsStep
-                case 2: dictationStep
-                case 3: cleanupStep
-                default: hotkeyStep
+                if needsInstallation {
+                    installStep
+                } else {
+                    switch step {
+                    case 0: welcomeStep
+                    case 1: permissionsStep
+                    case 2: dictationStep
+                    case 3: cleanupStep
+                    default: hotkeyStep
+                    }
                 }
             }
             .transition(.asymmetric(
@@ -158,7 +166,7 @@ struct OnboardingView: View {
 
             Spacer()
         }
-        .frame(width: 560, height: onboardingWindowHeight)
+        .frame(width: 560, height: needsInstallation ? 460 : onboardingWindowHeight)
         .animation(.easeInOut(duration: 0.3), value: step)
         .background(OnboardingWindowReader(window: $onboardingWindow))
     }
@@ -178,12 +186,93 @@ struct OnboardingView: View {
         }
     }
 
+    // MARK: - Install
+
+    private var installStep: some View {
+        VStack(spacing: 22) {
+            appIcon
+                .frame(width: 88, height: 88)
+
+            VStack(spacing: 8) {
+                Text("Finish installing Hold to Talk")
+                    .font(.title.bold())
+
+                Text("Move the app to Applications so permissions, updates, and Launch at Login keep working reliably.")
+                    .font(.body)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .frame(maxWidth: 430)
+            }
+
+            if isInstallingToApplications {
+                VStack(spacing: 10) {
+                    ProgressView()
+                        .controlSize(.regular)
+                    Text("Installing, then reopening from Applications…")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            } else {
+                Button("Move to Applications & Continue") {
+                    beginApplicationInstall()
+                }
+                .buttonStyle(.borderedProminent)
+                .controlSize(.large)
+                .disabled(!systemCompatibility.isSupported)
+            }
+
+            if let installErrorMessage {
+                VStack(spacing: 10) {
+                    Label(installErrorMessage, systemImage: "exclamationmark.triangle.fill")
+                        .font(.caption)
+                        .foregroundStyle(.orange)
+                        .multilineTextAlignment(.center)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .frame(maxWidth: 450)
+
+                    Button("Open Applications Folder") {
+                        NSWorkspace.shared.open(URL(fileURLWithPath: "/Applications", isDirectory: true))
+                    }
+                    .buttonStyle(.link)
+                    .controlSize(.small)
+                }
+            }
+
+            if !systemCompatibility.isSupported {
+                Text(systemCompatibility.statusDetailText)
+                    .font(.caption)
+                    .foregroundStyle(.red)
+                    .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .frame(maxWidth: onboardingContentWidth)
+            }
+        }
+        .padding(40)
+    }
+
+    private func beginApplicationInstall() {
+        installErrorMessage = nil
+        isInstallingToApplications = true
+        prepareOnboardingToResumeAfterAppMove()
+
+        Task { @MainActor in
+            await Task.yield()
+            switch installToApplicationsAndRelaunch() {
+            case .success:
+                break
+            case .failure(let message):
+                cancelOnboardingResumeAfterFailedAppMove()
+                installErrorMessage = message
+                isInstallingToApplications = false
+            }
+        }
+    }
+
     // MARK: - Step 1: Welcome
 
     private var welcomeStep: some View {
-        let installed = isInstalledInApplicationsFolder()
-
-        return VStack(spacing: 16) {
+        VStack(spacing: 16) {
             VStack(spacing: 14) {
                 appIcon
                     .frame(width: 80, height: 80)
@@ -211,57 +300,12 @@ struct OnboardingView: View {
 
             systemRequirementsCard
 
-            if !installed {
-                VStack(alignment: .leading, spacing: 8) {
-                    Label("Install to /Applications", systemImage: "arrow.down.app.fill")
-                        .font(.headline)
-                        .foregroundStyle(.orange)
-                    Text("Hold to Talk works best when installed in /Applications. Requires \(systemCompatibility.requirements.summaryText).")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .fixedSize(horizontal: false, vertical: true)
-                    Button("Install to Applications") {
-                        installErrorMessage = nil
-                        isInstallingToApplications = true
-                        switch installToApplicationsAndRelaunch() {
-                        case .success:
-                            break
-                        case .failure(let message):
-                            installErrorMessage = message
-                            isInstallingToApplications = false
-                        }
-                    }
-                    .buttonStyle(.bordered)
-                    .controlSize(.regular)
-
-                    if isInstallingToApplications {
-                        ProgressView()
-                            .controlSize(.small)
-                    }
-                }
-                .frame(maxWidth: onboardingContentWidth, alignment: .leading)
-                .padding(16)
-                .background(
-                    RoundedRectangle(cornerRadius: 12)
-                        .fill(.quaternary)
-                )
-
-                if let installErrorMessage {
-                    Text(installErrorMessage)
-                        .font(.caption2)
-                        .foregroundStyle(.secondary)
-                        .multilineTextAlignment(.center)
-                        .fixedSize(horizontal: false, vertical: true)
-                        .frame(maxWidth: onboardingContentWidth)
-                }
-            }
-
-            Button(welcomeActionTitle(installed: installed)) {
+            Button(systemCompatibility.isSupported ? "Get Started" : "This Mac Is Not Supported") {
                 step = 1
             }
             .buttonStyle(.borderedProminent)
             .controlSize(.large)
-            .disabled(!installed || !systemCompatibility.isSupported)
+            .disabled(!systemCompatibility.isSupported)
             .padding(.top, 4)
 
             if !systemCompatibility.isSupported {
@@ -274,13 +318,6 @@ struct OnboardingView: View {
             }
         }
         .padding(32)
-    }
-
-    private func welcomeActionTitle(installed: Bool) -> String {
-        if !systemCompatibility.isSupported {
-            return "This Mac Is Not Supported"
-        }
-        return installed ? "Get Started" : "Install to /Applications First"
     }
 
     private func featureRow(_ icon: String, _ text: String) -> some View {

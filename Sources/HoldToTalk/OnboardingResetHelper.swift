@@ -87,6 +87,16 @@ func rememberCompletedOnboardingForCurrentInstall(
     defaults.set(normalizedAppBundlePath(currentAppURL), forKey: onboardingCompletedAppPathDefaultsKey)
 }
 
+func prepareOnboardingToResumeAfterAppMove(defaults: UserDefaults = .standard) {
+    defaults.set(true, forKey: onboardingNeedsResumeAfterAppMoveDefaultsKey)
+    defaults.set(1, forKey: onboardingStepDefaultsKey)
+}
+
+func cancelOnboardingResumeAfterFailedAppMove(defaults: UserDefaults = .standard) {
+    defaults.removeObject(forKey: onboardingNeedsResumeAfterAppMoveDefaultsKey)
+    defaults.set(0, forKey: onboardingStepDefaultsKey)
+}
+
 func reopenOnboardingForCurrentInstall(
     defaults: UserDefaults = .standard,
     currentAppURL: URL = Bundle.main.bundleURL,
