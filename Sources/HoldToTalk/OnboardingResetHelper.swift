@@ -41,7 +41,8 @@ func shouldResetAppStateForFreshOnboarding(defaults: UserDefaults = .standard) -
 
 func onboardingLaunchPreparation(
     defaults: UserDefaults = .standard,
-    currentAppURL: URL = Bundle.main.bundleURL
+    currentAppURL: URL = Bundle.main.bundleURL,
+    environmentReady: (UserDefaults) -> Bool = { completedOnboardingEnvironmentReady(defaults: $0) }
 ) -> OnboardingLaunchPreparation {
     #if DEBUG
     if DebugFlags.resetOnboarding {
@@ -64,7 +65,7 @@ func onboardingLaunchPreparation(
         // App was moved or updated. If all permissions are still granted
         // and the selected transcription provider is ready, just update the
         // stored path and skip onboarding entirely.
-        if completedOnboardingEnvironmentReady(defaults: defaults) {
+        if environmentReady(defaults) {
             defaults.set(currentPath, forKey: onboardingCompletedAppPathDefaultsKey)
             return .none
         }

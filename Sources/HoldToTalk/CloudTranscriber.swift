@@ -19,8 +19,8 @@ enum CloudTranscriber {
     static func transcribe(
         audio: [Float],
         apiKey: String,
-        model: String = "gpt-4o-mini-transcribe",
-        baseURL: String = "https://api.openai.com/v1",
+        model: String = TranscriptionProvider.openAI.defaultModel,
+        baseURL: String = CloudProvider.openAI.defaultBaseURL,
         prompt: String? = nil
     ) async throws -> String {
         guard !audio.isEmpty else { return "" }

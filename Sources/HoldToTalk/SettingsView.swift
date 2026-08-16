@@ -265,10 +265,10 @@ struct SettingsView: View {
                 helperText("Audio is sent directly from your Mac to the endpoint you configure.")
                 DisclosureGroup("Advanced") {
                     TextField("Model", text: $engine.openaiTranscriptionModel,
-                              prompt: Text("gpt-4o-mini-transcribe"))
+                              prompt: Text(TranscriptionProvider.openAI.defaultModel))
                         .font(.system(.body, design: .monospaced))
                     TextField("Base URL", text: $engine.openaiBaseURL,
-                              prompt: Text("https://api.openai.com/v1"))
+                              prompt: Text(CloudProvider.openAI.defaultBaseURL))
                         .font(.system(.body, design: .monospaced))
                 }
             }
@@ -383,7 +383,7 @@ struct SettingsView: View {
                             .font(.system(.body, design: .monospaced))
                         if engine.resolvedTranscriptionProvider != .openAI {
                             TextField("Base URL", text: $engine.openaiBaseURL,
-                                      prompt: Text("https://api.openai.com/v1"))
+                                      prompt: Text(CloudProvider.openAI.defaultBaseURL))
                                 .font(.system(.body, design: .monospaced))
                         }
                     }
@@ -407,7 +407,7 @@ struct SettingsView: View {
                                   prompt: Text(CleanupProvider.anthropic.defaultModel))
                             .font(.system(.body, design: .monospaced))
                         TextField("Base URL", text: $engine.anthropicBaseURL,
-                                  prompt: Text("https://api.anthropic.com"))
+                                  prompt: Text(CloudProvider.anthropic.defaultBaseURL))
                             .font(.system(.body, design: .monospaced))
                     }
                     helperText("Uses the Anthropic messages API.")
@@ -446,8 +446,7 @@ struct SettingsView: View {
             helperText("Used for cloud dictation and OpenAI cleanup.")
 
             connectionEditor(
-                provider: "OpenAI",
-                account: "openai",
+                provider: .openAI,
                 key: $openaiAPIKey,
                 isSaved: $hasSavedOpenAIKey,
                 placeholder: "Paste your OpenAI API key"
@@ -458,8 +457,7 @@ struct SettingsView: View {
             helperText("Used for Anthropic cleanup. Dictation does not use Anthropic.")
 
             connectionEditor(
-                provider: "Anthropic",
-                account: "anthropic",
+                provider: .anthropic,
                 key: $anthropicAPIKey,
                 isSaved: $hasSavedAnthropicKey,
                 placeholder: "Paste your Anthropic API key"
@@ -473,8 +471,7 @@ struct SettingsView: View {
     }
 
     private func connectionEditor(
-        provider: String,
-        account: String,
+        provider: CloudProvider,
         key: Binding<String>,
         isSaved: Binding<Bool>,
         placeholder: String
@@ -492,7 +489,7 @@ struct SettingsView: View {
 
                 if isSaved.wrappedValue {
                     Button("Remove", role: .destructive) {
-                        KeychainHelper.delete(account: account)
+                        KeychainHelper.delete(provider: provider)
                         isSaved.wrappedValue = false
                         key.wrappedValue = ""
                     }
@@ -500,7 +497,7 @@ struct SettingsView: View {
                 }
             }
 
-            Text("Paste your \(provider) API key below, then click Save Connection.")
+            Text("Paste your \(provider.displayName) API key below, then click Save Connection.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
 
@@ -515,7 +512,10 @@ struct SettingsView: View {
                 Spacer()
 
                 Button(isSaved.wrappedValue ? "Replace Connection" : "Save Connection") {
-                    if KeychainHelper.save(account: account, key: key.wrappedValue.trimmingCharacters(in: .whitespacesAndNewlines)) {
+                    if KeychainHelper.save(
+                        provider: provider,
+                        key: key.wrappedValue.trimmingCharacters(in: .whitespacesAndNewlines)
+                    ) {
                         isSaved.wrappedValue = true
                         key.wrappedValue = ""
                     }
@@ -741,7 +741,10 @@ struct SettingsView: View {
         isRunningEnvironmentFix = false
     }
 
-    private func requestMicrophonePermission(openSettings: Bool, completion: @escaping () -> Void) {
+    private func requestMicrophonePermission(
+        openSettings: Bool,
+        completion: @escaping @MainActor @Sendable () -> Void
+    ) {
         switch AVCaptureDevice.authorizationStatus(for: .audio) {
         case .authorized:
             completion()

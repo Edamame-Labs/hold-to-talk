@@ -87,6 +87,34 @@ private extension String {
 
 // MARK: - Transcription Provider
 
+enum CloudProvider: String, CaseIterable, Identifiable {
+    case openAI = "openai"
+    case anthropic = "anthropic"
+
+    var id: String { rawValue }
+
+    var displayName: String {
+        switch self {
+        case .openAI:    return "OpenAI"
+        case .anthropic: return "Anthropic"
+        }
+    }
+
+    var defaultBaseURL: String {
+        switch self {
+        case .openAI:    return "https://api.openai.com/v1"
+        case .anthropic: return "https://api.anthropic.com"
+        }
+    }
+
+    var apiKeySavedDefaultsKey: String {
+        switch self {
+        case .openAI:    return openaiAPIKeySavedDefaultsKey
+        case .anthropic: return anthropicAPIKeySavedDefaultsKey
+        }
+    }
+}
+
 enum TranscriptionProvider: String, CaseIterable, Identifiable {
     case local
     case openAI = "openai"
@@ -97,6 +125,13 @@ enum TranscriptionProvider: String, CaseIterable, Identifiable {
         switch self {
         case .local:  return "On-Device"
         case .openAI: return "OpenAI"
+        }
+    }
+
+    var defaultModel: String {
+        switch self {
+        case .local:  return ""
+        case .openAI: return "gpt-4o-mini-transcribe"
         }
     }
 }
@@ -126,11 +161,11 @@ enum CleanupProvider: String, CaseIterable, Identifiable {
         }
     }
 
-    var keychainAccount: String {
+    var cloudProvider: CloudProvider? {
         switch self {
-        case .appleIntelligence: return ""
-        case .openAI:            return "openai"
-        case .anthropic:         return "anthropic"
+        case .appleIntelligence: return nil
+        case .openAI:            return .openAI
+        case .anthropic:         return .anthropic
         }
     }
 }

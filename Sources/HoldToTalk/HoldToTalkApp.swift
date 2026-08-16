@@ -5,8 +5,9 @@ import ServiceManagement
 import Sparkle
 #endif
 
+@MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
-    var openOnboardingHandler: (() -> Void)?
+    var openOnboardingHandler: (@MainActor @Sendable () -> Void)?
     private var pendingInitialOnboardingOpen = false
     private var hasOpenedInitialOnboarding = false
     private var onboardingRecoveryObservers: [NSObjectProtocol] = []
@@ -108,7 +109,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
-    func setOpenOnboardingHandler(_ handler: @escaping () -> Void) {
+    func setOpenOnboardingHandler(_ handler: @escaping @MainActor @Sendable () -> Void) {
         openOnboardingHandler = handler
         flushPendingInitialOnboardingOpen()
     }
@@ -134,18 +135,23 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func installOnboardingRecoveryObservers() {
         guard onboardingRecoveryObservers.isEmpty else { return }
 
+        // NotificationCenter does not express `queue: .main` as actor isolation,
+        // so each callback explicitly asserts the main-queue guarantee below.
         onboardingRecoveryObservers.append(
             NotificationCenter.default.addObserver(
                 forName: NSWindow.willCloseNotification,
                 object: nil,
                 queue: .main
             ) { [weak self] notification in
-                guard let self,
-                      self.shouldOpenInitialOnboarding,
-                      let window = notification.object as? NSWindow,
-                      self.isOnboardingWindow(window)
-                else { return }
-                self.scheduleOnboardingWindowRecovery(delay: 0.4)
+                nonisolated(unsafe) let mainQueueNotification = notification
+                MainActor.assumeIsolated {
+                    guard let self,
+                          self.shouldOpenInitialOnboarding,
+                          let window = mainQueueNotification.object as? NSWindow,
+                          self.isOnboardingWindow(window)
+                    else { return }
+                    self.scheduleOnboardingWindowRecovery(delay: 0.4)
+                }
             }
         )
 
@@ -156,12 +162,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 object: nil,
                 queue: .main
             ) { [weak self] notification in
-                guard let self,
-                      self.shouldOpenInitialOnboarding,
-                      let application = notification.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication,
-                      isSystemSettingsApplication(application)
-                else { return }
-                self.scheduleOnboardingWindowRecovery(delay: 0.8)
+                nonisolated(unsafe) let mainQueueNotification = notification
+                MainActor.assumeIsolated {
+                    guard let self,
+                          self.shouldOpenInitialOnboarding,
+                          let application = mainQueueNotification.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication,
+                          isSystemSettingsApplication(application)
+                    else { return }
+                    self.scheduleOnboardingWindowRecovery(delay: 0.8)
+                }
             }
         )
 
@@ -171,12 +180,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 object: nil,
                 queue: .main
             ) { [weak self] notification in
-                guard let self,
-                      self.shouldOpenInitialOnboarding,
-                      let application = notification.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication,
-                      isSystemSettingsApplication(application)
-                else { return }
-                self.scheduleOnboardingWindowRecovery(delay: 0.4)
+                nonisolated(unsafe) let mainQueueNotification = notification
+                MainActor.assumeIsolated {
+                    guard let self,
+                          self.shouldOpenInitialOnboarding,
+                          let application = mainQueueNotification.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication,
+                          isSystemSettingsApplication(application)
+                    else { return }
+                    self.scheduleOnboardingWindowRecovery(delay: 0.4)
+                }
             }
         )
     }
@@ -606,6 +618,7 @@ struct HoldToTalkApp: App {
     }()
 }
 
+@MainActor
 private func makeInstallAlert(
     icon: NSImage?,
     compatibility: SystemCompatibility
@@ -656,6 +669,7 @@ private struct OnboardingWindowConfigurator: NSViewRepresentable {
         Coordinator()
     }
 
+    @MainActor
     final class Coordinator {
         func configure(window: NSWindow?, isBlocking: Bool) {
             guard let window else { return }

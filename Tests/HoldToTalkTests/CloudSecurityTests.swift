@@ -2,6 +2,21 @@ import XCTest
 @testable import HoldToTalk
 
 final class CloudSecurityTests: XCTestCase {
+    func testCloudProviderDefaultsAreValidHTTPSURLs() throws {
+        for provider in CloudProvider.allCases {
+            XCTAssertEqual(
+                try normalizedCloudBaseURL(provider.defaultBaseURL).absoluteString,
+                provider.defaultBaseURL
+            )
+        }
+    }
+
+    func testCleanupProvidersMapToExpectedCloudProviders() {
+        XCTAssertNil(CleanupProvider.appleIntelligence.cloudProvider)
+        XCTAssertEqual(CleanupProvider.openAI.cloudProvider, .openAI)
+        XCTAssertEqual(CleanupProvider.anthropic.cloudProvider, .anthropic)
+    }
+
     func testCloudBaseURLRequiresHTTPS() {
         XCTAssertThrowsError(try normalizedCloudBaseURL("http://api.example.com/v1")) { error in
             XCTAssertEqual(error.localizedDescription, "Refusing to send API request to a non-HTTPS URL. Check your base URL in Settings.")

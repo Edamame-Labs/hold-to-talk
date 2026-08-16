@@ -40,7 +40,7 @@ enum TranscriptionProfile: String, CaseIterable, Identifiable {
 /// Actor isolation eliminates data races on the mutable recognizer property.
 actor Transcriber {
     private var recognizer: SherpaOnnxOfflineRecognizer?
-    private var loadTask: Task<SherpaOnnxOfflineRecognizer, Error>?
+    private var loadTask: Task<Void, Error>?
     private var hasCompletedDecodeWarmup = false
     private var currentHotwords: String = ""
 
@@ -55,7 +55,7 @@ actor Transcriber {
         guard recognizer == nil else { return }
 
         if let loadTask {
-            let loadedRecognizer = try await loadTask.value
+            try await loadTask.value
             if hotwords != currentHotwords {
                 self.loadTask = nil
                 recognizer = nil
@@ -63,19 +63,24 @@ actor Transcriber {
                 try await loadModel(numThreads: numThreads, hotwords: hotwords)
                 return
             }
-            recognizer = loadedRecognizer
             return
         }
 
         currentHotwords = hotwords
         print("[transcriber] Loading Parakeet TDT 0.6B...")
-        let task = Task { [currentHotwords] in
-            try createRecognizer(numThreads: numThreads, hotwords: currentHotwords)
+        let requestedHotwords = currentHotwords
+        let task = Task {
+            let loadedRecognizer = try createRecognizer(
+                numThreads: numThreads,
+                hotwords: requestedHotwords
+            )
+            try Task.checkCancellation()
+            recognizer = loadedRecognizer
         }
         loadTask = task
         defer { loadTask = nil }
 
-        recognizer = try await task.value
+        try await task.value
         print("[transcriber] Ready.")
     }
 

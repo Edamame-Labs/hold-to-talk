@@ -65,7 +65,7 @@ final class DictationEngine: ObservableObject {
     @AppStorage(hotwordsDefaultsKey) var hotwords: String = ""
     @AppStorage(transcriptionProviderDefaultsKey) var transcriptionProvider = TranscriptionProvider.local.rawValue
     @AppStorage(cleanupProviderDefaultsKey) var cleanupProvider = CleanupProvider.appleIntelligence.rawValue
-    @AppStorage(openaiTranscriptionModelDefaultsKey) var openaiTranscriptionModel = "gpt-4o-mini-transcribe"
+    @AppStorage(openaiTranscriptionModelDefaultsKey) var openaiTranscriptionModel = TranscriptionProvider.openAI.defaultModel
     @AppStorage(openaiCleanupModelDefaultsKey) var openaiCleanupModel = CleanupProvider.openAI.defaultModel
     @AppStorage(anthropicCleanupModelDefaultsKey) var anthropicCleanupModel = CleanupProvider.anthropic.defaultModel
     @AppStorage(openaiBaseURLDefaultsKey) var openaiBaseURL = ""
@@ -87,12 +87,12 @@ final class DictationEngine: ObservableObject {
 
     init() {
         recorder.levelHandler = { [weak self] level in
-            DispatchQueue.main.async {
+            Task { @MainActor [weak self] in
                 self?.recordingLevel = level
             }
         }
         recorder.onMaxDurationReached = { [weak self] in
-            DispatchQueue.main.async {
+            Task { @MainActor [weak self] in
                 guard let self, self.state == .recording else { return }
                 self.lastError = "Maximum recording length reached (\(AudioRecorder.maxRecordingSeconds / 60) minutes)."
                 self.finishActiveRecording()
@@ -244,15 +244,15 @@ final class DictationEngine: ObservableObject {
         hotwords = ""
         transcriptionProvider = TranscriptionProvider.local.rawValue
         cleanupProvider = CleanupProvider.appleIntelligence.rawValue
-        openaiTranscriptionModel = "gpt-4o-mini-transcribe"
+        openaiTranscriptionModel = TranscriptionProvider.openAI.defaultModel
         openaiCleanupModel = CleanupProvider.openAI.defaultModel
         anthropicCleanupModel = CleanupProvider.anthropic.defaultModel
         openaiBaseURL = ""
         anthropicBaseURL = ""
-        KeychainHelper.delete(account: "openai")
-        KeychainHelper.delete(account: "anthropic")
-        UserDefaults.standard.set(false, forKey: openaiAPIKeySavedDefaultsKey)
-        UserDefaults.standard.set(false, forKey: anthropicAPIKeySavedDefaultsKey)
+        for provider in CloudProvider.allCases {
+            KeychainHelper.delete(provider: provider)
+            UserDefaults.standard.set(false, forKey: provider.apiKeySavedDefaultsKey)
+        }
 
         modelManager.handleFreshOnboardingReset()
         refreshPermissionSnapshot()
@@ -366,33 +366,11 @@ final class DictationEngine: ObservableObject {
         state = .transcribing
         do {
             try Task.checkCancellation()
-            // -- Transcription --
             let transcribeStart = Date()
-            let raw: String
-            switch resolvedTranscriptionProvider {
-            case .local:
-                let activeTranscriber = ensureActiveTranscriber()
-                let profile = resolvedTranscriptionProfile
-                let currentHotwords = hotwords
-                raw = try await activeTranscriber.transcribe(audio, profile: profile, hotwords: currentHotwords)
-                let transcribeTime = Date().timeIntervalSince(transcribeStart)
-                debugLog("[holdtotalk] Transcribed \(String(format: "%.1f", duration))s audio in \(String(format: "%.2f", transcribeTime))s [\(profile.rawValue)]")
-            case .openAI:
-                try CloudTranscriber.validateRecordingDuration(duration)
-                try Task.checkCancellation()
-                guard let apiKey = KeychainHelper.load(account: "openai"), !apiKey.isEmpty else {
-                    UserDefaults.standard.set(false, forKey: openaiAPIKeySavedDefaultsKey)
-                    throw CloudTranscriberError.noAPIKey
-                }
-                UserDefaults.standard.set(true, forKey: openaiAPIKeySavedDefaultsKey)
-                let model = openaiTranscriptionModel.isEmpty ? "gpt-4o-mini-transcribe" : openaiTranscriptionModel
-                let baseURL = openaiBaseURL.isEmpty ? "https://api.openai.com/v1" : openaiBaseURL
-                raw = try await CloudTranscriber.transcribe(
-                    audio: audio, apiKey: apiKey, model: model, baseURL: baseURL
-                )
-                let transcribeTime = Date().timeIntervalSince(transcribeStart)
-                debugLog("[holdtotalk] Cloud transcribed \(String(format: "%.1f", duration))s audio in \(String(format: "%.2f", transcribeTime))s [openai/\(model)]")
-            }
+            let transcription = try await transcribe(audio, duration: duration)
+            let raw = transcription.text
+            let transcribeTime = Date().timeIntervalSince(transcribeStart)
+            debugLog("[holdtotalk] Transcribed \(String(format: "%.1f", duration))s audio in \(String(format: "%.2f", transcribeTime))s [\(transcription.source)]")
 
             try Task.checkCancellation()
 
@@ -405,45 +383,9 @@ final class DictationEngine: ObservableObject {
             lastRawText = raw
             debugLogSensitive("[holdtotalk] Raw", text: raw)
 
-            // -- Text Cleanup --
-            let finalText: String
-            var cleanupWarning: String?
-            if textCleanupEnabled {
-                let cleanupStart = Date()
-                let cleaned: String
-                switch resolvedCleanupProvider {
-                case .appleIntelligence:
-                    cleaned = await TextCleanup.cleanup(raw, prompt: textCleanupPrompt)
-                case .openAI:
-                    let apiKey = KeychainHelper.load(account: "openai") ?? ""
-                    UserDefaults.standard.set(!apiKey.isEmpty, forKey: openaiAPIKeySavedDefaultsKey)
-                    let model = openaiCleanupModel.isEmpty ? CleanupProvider.openAI.defaultModel : openaiCleanupModel
-                    let baseURL = openaiBaseURL.isEmpty ? nil : openaiBaseURL
-                    let cleanupResult = await CloudTextCleanup.cleanup(
-                        raw, provider: .openAI, apiKey: apiKey, model: model,
-                        prompt: textCleanupPrompt, baseURL: baseURL
-                    )
-                    cleaned = cleanupResult.text
-                    cleanupWarning = cleanupResult.userFacingError
-                case .anthropic:
-                    let apiKey = KeychainHelper.load(account: "anthropic") ?? ""
-                    UserDefaults.standard.set(!apiKey.isEmpty, forKey: anthropicAPIKeySavedDefaultsKey)
-                    let model = anthropicCleanupModel.isEmpty ? CleanupProvider.anthropic.defaultModel : anthropicCleanupModel
-                    let baseURL = anthropicBaseURL.isEmpty ? nil : anthropicBaseURL
-                    let cleanupResult = await CloudTextCleanup.cleanup(
-                        raw, provider: .anthropic, apiKey: apiKey, model: model,
-                        prompt: textCleanupPrompt, baseURL: baseURL
-                    )
-                    cleaned = cleanupResult.text
-                    cleanupWarning = cleanupResult.userFacingError
-                }
-                let cleanupTime = Date().timeIntervalSince(cleanupStart)
-                let changed = cleaned != raw
-                debugLog("[holdtotalk] Text cleanup \(changed ? "modified" : "unchanged") in \(String(format: "%.2f", cleanupTime))s [\(resolvedCleanupProvider.rawValue)]")
-                finalText = cleaned
-            } else {
-                finalText = raw
-            }
+            let cleanup = await cleanUp(raw)
+            let finalText = cleanup.text
+            let cleanupWarning = cleanup.warning
 
             try Task.checkCancellation()
             guard taskID == activeDictationID else { return }
@@ -504,18 +446,95 @@ final class DictationEngine: ObservableObject {
         dictationTask = nil
     }
 
+    private func transcribe(_ audio: [Float], duration: TimeInterval) async throws -> (text: String, source: String) {
+        switch resolvedTranscriptionProvider {
+        case .local:
+            let profile = resolvedTranscriptionProfile
+            let text = try await ensureActiveTranscriber().transcribe(
+                audio,
+                profile: profile,
+                hotwords: hotwords
+            )
+            return (text, profile.rawValue)
+
+        case .openAI:
+            let provider = CloudProvider.openAI
+            try CloudTranscriber.validateRecordingDuration(duration)
+            try Task.checkCancellation()
+            guard let apiKey = KeychainHelper.load(provider: provider), !apiKey.isEmpty else {
+                UserDefaults.standard.set(false, forKey: provider.apiKeySavedDefaultsKey)
+                throw CloudTranscriberError.noAPIKey
+            }
+
+            UserDefaults.standard.set(true, forKey: provider.apiKeySavedDefaultsKey)
+            let model = openaiTranscriptionModel.isEmpty
+                ? TranscriptionProvider.openAI.defaultModel
+                : openaiTranscriptionModel
+            let baseURL = openaiBaseURL.isEmpty ? provider.defaultBaseURL : openaiBaseURL
+            let text = try await CloudTranscriber.transcribe(
+                audio: audio,
+                apiKey: apiKey,
+                model: model,
+                baseURL: baseURL
+            )
+            return (text, "\(provider.rawValue)/\(model)")
+        }
+    }
+
+    private func cleanUp(_ raw: String) async -> (text: String, warning: String?) {
+        guard textCleanupEnabled else { return (raw, nil) }
+
+        let provider = resolvedCleanupProvider
+        let cleanupStart = Date()
+        let result: (text: String, warning: String?)
+        switch provider {
+        case .appleIntelligence:
+            result = (await TextCleanup.cleanup(raw, prompt: textCleanupPrompt), nil)
+
+        case .openAI, .anthropic:
+            guard let cloudProvider = provider.cloudProvider else { return (raw, nil) }
+            let apiKey = KeychainHelper.load(provider: cloudProvider) ?? ""
+            UserDefaults.standard.set(!apiKey.isEmpty, forKey: cloudProvider.apiKeySavedDefaultsKey)
+
+            let configuredModel: String
+            let configuredBaseURL: String
+            switch provider {
+            case .openAI:
+                configuredModel = openaiCleanupModel
+                configuredBaseURL = openaiBaseURL
+            case .anthropic:
+                configuredModel = anthropicCleanupModel
+                configuredBaseURL = anthropicBaseURL
+            case .appleIntelligence:
+                return (raw, nil)
+            }
+
+            let cleanup = await CloudTextCleanup.cleanup(
+                raw,
+                provider: provider,
+                apiKey: apiKey,
+                model: configuredModel.isEmpty ? provider.defaultModel : configuredModel,
+                prompt: textCleanupPrompt,
+                baseURL: configuredBaseURL.isEmpty ? nil : configuredBaseURL
+            )
+            result = (cleanup.text, cleanup.userFacingError)
+        }
+
+        let cleanupTime = Date().timeIntervalSince(cleanupStart)
+        let changed = result.text != raw
+        debugLog("[holdtotalk] Text cleanup \(changed ? "modified" : "unchanged") in \(String(format: "%.2f", cleanupTime))s [\(provider.rawValue)]")
+        return result
+    }
+
     private var resolvedHotkey: HotkeyManager.Hotkey {
         HotkeyManager.Hotkey.preferredSelection(from: hotkeyChoice)
     }
 
     private func ensureActiveTranscriber() -> Transcriber {
-        if transcriber == nil {
-            transcriber = Transcriber()
-        }
-        guard let transcriber else {
-            fatalError("Transcriber should exist after initialization")
-        }
-        return transcriber
+        if let transcriber { return transcriber }
+        let newTranscriber = Transcriber()
+        transcriber = newTranscriber
+        return newTranscriber
     }
 
     private func zeroAudioSamples(_ audio: inout [Float]) {
