@@ -816,6 +816,107 @@
       line-height: 1.6;
     }
 
+    /* ---- Modes ---- */
+    .modes { padding: 80px 0; }
+
+    .modes-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+    }
+
+    .mode-card { padding: 36px 32px; }
+
+    .mode-card:hover {
+      background: var(--glass-bg-hover);
+      box-shadow: var(--glass-shadow-lg);
+      transform: translateY(-3px);
+    }
+
+    .mode-head {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 22px;
+    }
+
+    .mode-head .icon-wrap {
+      width: 44px;
+      height: 44px;
+      border-radius: 12px;
+      background: var(--icon-bg);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .mode-head .icon-wrap svg {
+      width: 22px;
+      height: 22px;
+      stroke: var(--icon-color);
+      fill: none;
+      stroke-width: 1.5;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    .mode-head h3 { font-size: 21px; font-weight: 700; letter-spacing: -0.02em; }
+
+    .mode-badge {
+      margin-left: auto;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      padding: 4px 10px;
+      border-radius: 980px;
+      white-space: nowrap;
+    }
+
+    .badge-default { background: rgba(48, 209, 88, 0.12); color: #248a3d; }
+    .badge-optin { background: var(--accent-soft); color: var(--accent); }
+
+    @media (prefers-color-scheme: dark) {
+      .badge-default { color: #30d158; }
+    }
+
+    .mode-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .mode-list li {
+      display: flex;
+      gap: 10px;
+      font-size: 14px;
+      color: var(--text-secondary);
+      line-height: 1.55;
+    }
+
+    .mode-list li svg {
+      width: 15px;
+      height: 15px;
+      flex-shrink: 0;
+      margin-top: 3px;
+      stroke: var(--accent);
+      fill: none;
+      stroke-width: 2.5;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    .mode-list li strong { color: var(--text); font-weight: 600; }
+
+    .modes-note {
+      text-align: center;
+      font-size: 14px;
+      color: var(--text-secondary);
+      margin-top: 24px;
+    }
+
     /* ---- Steps ---- */
     .how-it-works { padding: 80px 0; }
 
@@ -1114,6 +1215,7 @@
       .playground-panel { grid-template-columns: 1fr; }
       .playground-left { border-right: none; border-bottom: 0.5px solid var(--glass-border-bottom); }
       .security-grid { grid-template-columns: repeat(2, 1fr); }
+      .modes-grid { grid-template-columns: 1fr; }
       footer .foot-grid { grid-template-columns: 1fr 1fr; }
     }
 
@@ -1261,6 +1363,52 @@
   </div>
 </section>
 
+<section class="modes" id="modes">
+  <div class="container">
+    <div class="section-heading reveal">
+      <div class="eyebrow">Two modes</div>
+      <h2>Local by default. Cloud by choice.</h2>
+      <p>Run fully on-device, or bring your own LLM key — transcription and cleanup are independent switches.</p>
+    </div>
+    <div class="modes-grid">
+
+      <div class="mode-card glass spot reveal" style="--d:0s">
+        <div class="mode-head">
+          <div class="icon-wrap">
+            <svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="2"/><rect x="9" y="9" width="6" height="6"/><path d="M9 1v3M15 1v3M9 20v3M15 20v3M1 9h3M1 15h3M20 9h3M20 15h3"/></svg>
+          </div>
+          <h3>Local</h3>
+          <span class="mode-badge badge-default">Default</span>
+        </div>
+        <ul class="mode-list">
+          <li><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg><span><strong>Parakeet TDT 0.6B</strong> transcribes entirely on your Mac via sherpa-onnx</span></li>
+          <li><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg><span><strong>Works offline</strong> after a one-time ~640 MB model download</span></li>
+          <li><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg><span>Optional <strong>Apple Intelligence</strong> cleanup also stays on-device (macOS 26+)</span></li>
+          <li><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg><span><strong>No account, no key, no cost</strong> — nothing leaves your Mac</span></li>
+        </ul>
+      </div>
+
+      <div class="mode-card glass spot reveal" style="--d:0.1s">
+        <div class="mode-head">
+          <div class="icon-wrap">
+            <svg viewBox="0 0 24 24"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>
+          </div>
+          <h3>Cloud</h3>
+          <span class="mode-badge badge-optin">Opt-in &middot; your key</span>
+        </div>
+        <ul class="mode-list">
+          <li><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg><span><strong>OpenAI-compatible transcription</strong> (gpt-4o-mini-transcribe by default), OpenAI or Anthropic cleanup</span></li>
+          <li><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg><span>Keys live in <strong>this Mac&rsquo;s Keychain</strong>; requests go directly to the provider over HTTPS</span></li>
+          <li><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg><span><strong>Ephemeral session</strong> — no cookies, no disk cache, no Hold To Talk servers</span></li>
+          <li><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg><span><strong>Billed by your provider</strong>, only when you use it</span></li>
+        </ul>
+      </div>
+
+    </div>
+    <p class="modes-note reveal">Mix and match in Settings — local transcription with cloud cleanup, or the reverse. Custom HTTPS base URLs work with proxies and Azure OpenAI.</p>
+  </div>
+</section>
+
 <section class="features" id="features">
   <div class="container">
     <div class="section-heading reveal">
@@ -1307,7 +1455,7 @@
           <svg viewBox="0 0 24 24"><path d="M12 2a4 4 0 0 0-4 4v4a4 4 0 0 0 8 0V6a4 4 0 0 0-4-4z"/><path d="M19 10v1a7 7 0 0 1-14 0v-1"/><line x1="12" y1="18" x2="12" y2="22"/></svg>
         </div>
         <h3>Smart text cleanup</h3>
-        <p>Optional cleanup fixes punctuation and filler words via Apple Intelligence (on-device) or cloud models (OpenAI, Anthropic) with your own key.</p>
+        <p>Optional cleanup fixes punctuation and filler words via Apple Intelligence (on-device, macOS 26+) or cloud models (OpenAI, Anthropic) with your own key.</p>
       </div>
 
       <div class="feature-card glass spot reveal" style="--d:0.12s">
