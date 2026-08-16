@@ -216,6 +216,24 @@
       50% { transform: translateY(-6px); }
     }
 
+    .hero .pulse-ring {
+      position: absolute;
+      inset: -14px;
+      border-radius: 34px;
+      border: 1.5px solid var(--accent);
+      opacity: 0;
+      animation: pulse 3.2s ease-out infinite;
+      pointer-events: none;
+    }
+
+    .hero .pulse-ring:nth-child(2) { animation-delay: 1.6s; }
+
+    @keyframes pulse {
+      0% { transform: scale(0.92); opacity: 0.5; }
+      70% { opacity: 0.12; }
+      100% { transform: scale(1.35); opacity: 0; }
+    }
+
     .hero .icon-stage::before {
       content: "";
       position: absolute;
@@ -1192,6 +1210,8 @@
 <header class="hero">
   <div class="container">
     <div class="icon-stage">
+      <span class="pulse-ring" aria-hidden="true"></span>
+      <span class="pulse-ring" aria-hidden="true"></span>
       <img src="logo.png" alt="" class="app-icon">
     </div>
     <h1>Hold a key. Speak.<br>Your words, typed.</h1>
