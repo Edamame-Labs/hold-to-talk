@@ -55,6 +55,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationWillTerminate(_ notification: Notification) {
         removeOnboardingRecoveryObservers()
+        // Must be synchronous: llama.cpp's Metal backend aborts during static
+        // destruction if a context is still alive at exit.
+        LocalTextCleanup.shutdownForTermination()
     }
 
     @MainActor
@@ -310,7 +313,12 @@ struct HoldToTalkApp: App {
         .defaultLaunchBehavior(.suppressed)
 
         Window("Hold to Talk Settings", id: "settings") {
-            SettingsView(engine: engine, modelManager: engine.modelManager, updater: appUpdater)
+            SettingsView(
+                engine: engine,
+                modelManager: engine.modelManager,
+                cleanupModelManager: engine.cleanupModelManager,
+                updater: appUpdater
+            )
         }
         .windowResizability(.contentSize)
         .defaultLaunchBehavior(.suppressed)

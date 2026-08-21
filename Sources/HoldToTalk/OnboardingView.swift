@@ -394,7 +394,7 @@ struct OnboardingView: View {
 
     private var defaultSpeechModeDescription: String {
         systemCompatibility.isAppleSiliconMac
-            ? "Local Parakeet model + Apple Intelligence cleanup when available"
+            ? "Local Parakeet model + on-device cleanup"
             : "Apple Silicon required for local Parakeet transcription"
     }
 

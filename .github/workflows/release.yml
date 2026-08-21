@@ -17,8 +17,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Setup sherpa-onnx
-        run: bash scripts/setup-sherpa-onnx.sh
+      - name: Setup native dependencies
+        run: make setup
 
       - name: Resolve release metadata
         run: |

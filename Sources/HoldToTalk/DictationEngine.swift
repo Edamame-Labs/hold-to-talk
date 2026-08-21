@@ -64,7 +64,10 @@ final class DictationEngine: ObservableObject {
     @AppStorage(textCleanupPromptDefaultsKey) var textCleanupPrompt = TextCleanup.defaultPrompt
     @AppStorage(hotwordsDefaultsKey) var hotwords: String = ""
     @AppStorage(transcriptionProviderDefaultsKey) var transcriptionProvider = TranscriptionProvider.local.rawValue
-    @AppStorage(cleanupProviderDefaultsKey) var cleanupProvider = CleanupProvider.appleIntelligence.rawValue
+    @AppStorage(dictationLanguageModeDefaultsKey) var dictationLanguageMode = DictationLanguageMode.english.rawValue
+    @AppStorage(cleanupProviderDefaultsKey) var cleanupProvider = CleanupProvider.defaultForThisMac().rawValue
+    @AppStorage(cleanupStylingDefaultsKey) var cleanupStyling = CleanupStyling.semiFormal.rawValue
+    @AppStorage(cleanupStructureDefaultsKey) var cleanupStructure = CleanupStructure.prose.rawValue
     @AppStorage(openaiTranscriptionModelDefaultsKey) var openaiTranscriptionModel = TranscriptionProvider.openAI.defaultModel
     @AppStorage(openaiCleanupModelDefaultsKey) var openaiCleanupModel = CleanupProvider.openAI.defaultModel
     @AppStorage(anthropicCleanupModelDefaultsKey) var anthropicCleanupModel = CleanupProvider.anthropic.defaultModel
@@ -75,6 +78,7 @@ final class DictationEngine: ObservableObject {
     private var transcriber: Transcriber?
     private let hotkeyManager = HotkeyManager()
     let modelManager = ModelManager()
+    let cleanupModelManager = CleanupModelManager()
     private var didStart = false
     private var recordingTargetAppPID: pid_t?
     private var recordingTargetBundleID: String?
@@ -82,6 +86,7 @@ final class DictationEngine: ObservableObject {
     private var activationObserver: NSObjectProtocol?
     private var transcriberWarmupTask: Task<Void, Never>?
     private var completedWarmup = false
+    private var cleanupWarmupTask: Task<Void, Never>?
     private var dictationTask: Task<Void, Never>?
     private var activeDictationID = 0
 
@@ -149,6 +154,55 @@ final class DictationEngine: ObservableObject {
         }
     }
 
+    /// Loads the on-device cleanup model ahead of the first dictation so the
+    /// user does not pay the load cost mid-pipeline.
+    func prewarmCleanupModel() {
+        guard textCleanupEnabled, resolvedCleanupProvider == .localS1Mini else { return }
+        guard CleanupModelManager.isModelDownloaded else { return }
+        guard !LocalTextCleanup.isLoaded, cleanupWarmupTask == nil else { return }
+
+        cleanupWarmupTask = Task { [weak self] in
+            do {
+                try await LocalTextCleanup.shared.warmUp()
+                debugLog("[holdtotalk] Cleanup model pre-warm complete")
+            } catch {
+                debugLog("[holdtotalk] Cleanup model pre-warm failed: \(error)")
+            }
+            guard let self else { return }
+            self.cleanupWarmupTask = nil
+        }
+    }
+
+    /// Moves the stored cleanup provider onto one that handles the selected
+    /// language. Called when the language mode changes so the Settings picker
+    /// reflects the switch instead of silently disagreeing with what runs.
+    func normalizeCleanupProviderForLanguage() {
+        let mode = resolvedLanguageMode
+        guard let stored = CleanupProvider(rawValue: cleanupProvider) else {
+            cleanupProvider = CleanupProvider.defaultForThisMac(languageMode: mode).rawValue
+            reloadCleanupProvider()
+            return
+        }
+        guard !stored.supports(mode) else { return }
+
+        let replacement = CleanupProvider.defaultForThisMac(languageMode: mode)
+        debugLog("[holdtotalk] Cleanup provider \(stored.rawValue) does not support \(mode.rawValue); switching to \(replacement.rawValue)")
+        cleanupProvider = replacement.rawValue
+        reloadCleanupProvider()
+    }
+
+    /// Drops the on-device cleanup model when it is no longer the selected
+    /// provider, so an unused 462 MB model does not stay resident.
+    func reloadCleanupProvider() {
+        cleanupWarmupTask?.cancel()
+        cleanupWarmupTask = nil
+        if resolvedCleanupProvider == .localS1Mini, textCleanupEnabled {
+            prewarmCleanupModel()
+        } else {
+            Task { await LocalTextCleanup.shared.unload() }
+        }
+    }
+
     func start() {
         guard !didStart else { return }
         didStart = true
@@ -198,6 +252,7 @@ final class DictationEngine: ObservableObject {
         }
 
         prewarmTranscriber()
+        prewarmCleanupModel()
 
         debugLog("[holdtotalk] Ready -- hold [\(resolvedHotkey.displayName)] to dictate.")
     }
@@ -212,6 +267,8 @@ final class DictationEngine: ObservableObject {
         axPollTask = nil
         transcriberWarmupTask?.cancel()
         transcriberWarmupTask = nil
+        cleanupWarmupTask?.cancel()
+        cleanupWarmupTask = nil
         if let activationObserver {
             NotificationCenter.default.removeObserver(activationObserver)
         }
@@ -243,7 +300,10 @@ final class DictationEngine: ObservableObject {
         textCleanupPrompt = TextCleanup.defaultPrompt
         hotwords = ""
         transcriptionProvider = TranscriptionProvider.local.rawValue
-        cleanupProvider = CleanupProvider.appleIntelligence.rawValue
+        dictationLanguageMode = DictationLanguageMode.english.rawValue
+        cleanupProvider = CleanupProvider.defaultForThisMac().rawValue
+        cleanupStyling = CleanupStyling.semiFormal.rawValue
+        cleanupStructure = CleanupStructure.prose.rawValue
         openaiTranscriptionModel = TranscriptionProvider.openAI.defaultModel
         openaiCleanupModel = CleanupProvider.openAI.defaultModel
         anthropicCleanupModel = CleanupProvider.anthropic.defaultModel
@@ -255,6 +315,7 @@ final class DictationEngine: ObservableObject {
         }
 
         modelManager.handleFreshOnboardingReset()
+        cleanupModelManager.handleFreshOnboardingReset()
         refreshPermissionSnapshot()
     }
 
@@ -329,6 +390,7 @@ final class DictationEngine: ObservableObject {
         state = .recording
         recordingLevel = 0
         prewarmTranscriber()
+        prewarmCleanupModel()
 
         do {
             try recorder.start()
@@ -485,11 +547,20 @@ final class DictationEngine: ObservableObject {
         guard textCleanupEnabled else { return (raw, nil) }
 
         let provider = resolvedCleanupProvider
+        guard provider.supports(resolvedLanguageMode) else {
+            // resolvedCleanupProvider already clamps, so this is unreachable in
+            // practice — but never hand non-English text to an English-only model.
+            debugLog("[holdtotalk] Cleanup skipped: \(provider.rawValue) does not support \(resolvedLanguageMode.rawValue)")
+            return (raw, nil)
+        }
         let cleanupStart = Date()
         let result: (text: String, warning: String?)
         switch provider {
         case .appleIntelligence:
             result = (await TextCleanup.cleanup(raw, prompt: textCleanupPrompt), nil)
+
+        case .localS1Mini:
+            result = await localCleanUp(raw)
 
         case .openAI, .anthropic:
             guard let cloudProvider = provider.cloudProvider else { return (raw, nil) }
@@ -505,7 +576,7 @@ final class DictationEngine: ObservableObject {
             case .anthropic:
                 configuredModel = anthropicCleanupModel
                 configuredBaseURL = anthropicBaseURL
-            case .appleIntelligence:
+            case .appleIntelligence, .localS1Mini:
                 return (raw, nil)
             }
 
@@ -524,6 +595,31 @@ final class DictationEngine: ObservableObject {
         let changed = result.text != raw
         debugLog("[holdtotalk] Text cleanup \(changed ? "modified" : "unchanged") in \(String(format: "%.2f", cleanupTime))s [\(provider.rawValue)]")
         return result
+    }
+
+    /// Runs S1-mini on this Mac. Any failure keeps the raw transcription — a
+    /// literal transcript is always better than a lost one.
+    private func localCleanUp(_ raw: String) async -> (text: String, warning: String?) {
+        guard CleanupModelManager.isModelDownloaded else {
+            cleanupModelManager.refreshDownloadStatus()
+            return (raw, LocalCleanupError.modelMissing.localizedDescription)
+        }
+
+        do {
+            let cleaned = try await LocalTextCleanup.shared.cleanup(
+                raw,
+                styling: resolvedCleanupStyling,
+                structure: resolvedCleanupStructure
+            )
+            return (TextCleanup.validatedCleanedOutput(raw: raw, cleaned: cleaned), nil)
+        } catch is CancellationError {
+            return (raw, nil)
+        } catch {
+            debugLog("[holdtotalk] Local cleanup failed: \(error)")
+            let message = (error as? LocalizedError)?.errorDescription
+                ?? "On-device cleanup failed. Using the raw transcription."
+            return (raw, message)
+        }
     }
 
     private var resolvedHotkey: HotkeyManager.Hotkey {
@@ -550,8 +646,25 @@ final class DictationEngine: ObservableObject {
         TranscriptionProvider(rawValue: transcriptionProvider) ?? .local
     }
 
+    var resolvedLanguageMode: DictationLanguageMode {
+        DictationLanguageMode(rawValue: dictationLanguageMode) ?? .english
+    }
+
+    /// Clamped to the selected language mode, so a provider that cannot handle
+    /// the user's language can never run even if it is still stored in defaults.
     var resolvedCleanupProvider: CleanupProvider {
-        CleanupProvider(rawValue: cleanupProvider) ?? .appleIntelligence
+        CleanupProvider.resolved(
+            storedRawValue: cleanupProvider,
+            languageMode: resolvedLanguageMode
+        )
+    }
+
+    var resolvedCleanupStyling: CleanupStyling {
+        CleanupStyling(rawValue: cleanupStyling) ?? .semiFormal
+    }
+
+    var resolvedCleanupStructure: CleanupStructure {
+        CleanupStructure(rawValue: cleanupStructure) ?? .prose
     }
 
     private var resolvedTranscriptionProfile: TranscriptionProfile {

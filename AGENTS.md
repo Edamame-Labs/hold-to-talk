@@ -16,7 +16,7 @@ Hard constraints:
 ## Setup and daily commands
 
 ```bash
-make setup    # one-time: download sherpa-onnx xcframework into Frameworks/ (make build/run call it; needed once before raw swift build)
+make setup    # one-time: download sherpa-onnx + llama.cpp xcframeworks into Frameworks/ (make build/run call it; needed once before raw swift build)
 swift build   # debug build
 swift test    # full test suite — run before handing off any non-docs change
 make run      # debug .app bundle + launch; enables debug onboarding controls (e.g. Skip Permissions)
@@ -42,6 +42,7 @@ Sources/TranscribeCmd/         CLI tool for transcription experiments/evaluation
 Tests/HoldToTalkTests/         Unit tests (XCTest + Swift Testing)
 Resources/                     App bundle resources, entitlements, Info.plist, icons, privacy manifest
 scripts/setup-sherpa-onnx.sh   Downloads/prepares sherpa-onnx xcframework
+scripts/setup-llama-cpp.sh     Downloads/prepares llama.cpp xcframework (macOS slice only)
 scripts/reset-fresh-test.sh    Removes installs/state and resets permissions
 scripts/package-dmg.sh         Direct-distribution DMG packaging
 evaluation/                    Manual WER/evaluation helpers
@@ -63,7 +64,7 @@ HotkeyManager
  -> DictationEngine.endRecording()
  -> AudioRecorder.stop() -> 16 kHz mono Float audio
  -> Transcriber OR CloudTranscriber
- -> TextCleanup OR CloudTextCleanup
+ -> TextCleanup OR LocalTextCleanup OR CloudTextCleanup
  -> TextInserter
  -> target app
 ```
@@ -77,10 +78,13 @@ File responsibilities:
 - `Transcriber.swift`: local sherpa-onnx recognizer, Silero VAD segmentation, silence trimming, normalization, repeated-phrase cleanup, profile selection, hotwords.
 - `CloudTranscriber.swift`: OpenAI-compatible `/audio/transcriptions` request using user key and configurable HTTPS base URL.
 - `TextCleanup.swift`: optional Apple Intelligence cleanup guarded by `canImport(FoundationModels)` and macOS availability; returns original text on failure/timeout.
+- `LocalTextCleanup.swift`: optional on-device cleanup running Superwhisper S1-mini through llama.cpp. Works on any Apple Silicon Mac, no Apple Intelligence required. Model/context handles live in a lock-guarded `LlamaHandles` so they can be freed synchronously at termination.
+- `S1MiniModel.swift`: S1-mini metadata plus the exact prompt format (system prompt, control line, empty think block) and transcript chunking. No llama.cpp dependency, so it is fully unit-testable.
+- `CleanupModelManager.swift`: S1-mini GGUF download, checksum validation, delete/status.
 - `CloudTextCleanup.swift`: OpenAI chat completions or Anthropic messages cleanup; failures fall back to original text.
 - `CloudProvider.swift`: cloud URL validation and ephemeral `URLSession`.
 - `TextInserter.swift`: secure-input checks, target app strategy, CGEvent Unicode insertion or clipboard paste.
-- `ModelManager.swift`: model download, checksum validation, extraction, delete/status.
+- `ModelManager.swift`: speech model download, checksum validation, extraction, delete/status.
 - `OnboardingView.swift`: install/permissions/model/cloud/hotkey wizard.
 - `SettingsView.swift`: provider/key/model/hotkey/cleanup/update/logging controls.
 - `SystemSettingsHelper.swift`: microphone/post-event permission helpers and stable-code-identity behavior.
@@ -88,7 +92,7 @@ File responsibilities:
 - `DebugLog.swift`: local diagnostic logging with transcript redaction and 1 MB truncation.
 - `KeychainHelper.swift`: API key storage under service `com.holdtotalk.apikeys`, accounts `openai` and `anthropic`.
 
-Tech notes: `swift-tools-version: 6.0` with `swiftLanguageMode(.v5)`. Local ASR is sherpa-onnx (`Frameworks/sherpa_onnx.xcframework`) running NVIDIA Parakeet TDT 0.6B v2 int8, downloaded at runtime into Application Support. Sparkle ships in direct-distribution builds only; `APP_STORE=1` excludes it.
+Tech notes: `swift-tools-version: 6.0` with `swiftLanguageMode(.v5)`. Local ASR is sherpa-onnx (`Frameworks/sherpa_onnx.xcframework`, static) running NVIDIA Parakeet TDT 0.6B v2 int8. Local cleanup is llama.cpp (`Frameworks/llama.xcframework`, **dynamic**) running Superwhisper S1-mini Q4_K_M. Both models download at runtime into Application Support. `llama.framework` is linked at build time, so every bundle-assembly path must embed and sign it or the app will not launch: `make build`, `make run`, and the App Store workflow's inline assembly all do. Sparkle ships in direct-distribution builds only; `APP_STORE=1` excludes it.
 
 ## Build variants
 
@@ -111,6 +115,12 @@ Direct distribution uses Sparkle appcast metadata in `docs/appcast.xml`. The App
 - New UserDefaults keys go in `OnboardingResetHelper.swift` as top-level constants.
 - Runtime paths: models in `~/Library/Application Support/HoldToTalk/models`, debug log at `~/Library/Application Support/HoldToTalk/debug.log`.
 - Keep privacy/security tests updated when touching cloud providers, URL validation, key handling, logging, or text insertion.
+- llama.cpp's Metal backend aborts during static destruction if a context is still alive at exit. `applicationWillTerminate` calls `LocalTextCleanup.shutdownForTermination()` and an `atexit` handler backs it up — preserve both, or quitting becomes a crash report.
+- S1-mini is English-only and garbles other languages rather than failing. `DictationLanguageMode` gates it: `CleanupProvider.resolved(storedRawValue:languageMode:)` clamps a stale selection, and `DictationEngine.cleanUp` re-checks before running. Keep both — the clamp is what a stored preference hits after the user switches language.
+- Apple Intelligence stays available in multilingual mode on purpose. It is the only on-device multilingual cleanup, so hiding it would push those users to the cloud and break "local by default".
+- The S1-mini licence is Apache 2.0 plus an additional term: the model must be identified as "S1-mini" by "Superwhisper" with that exact capitalization wherever it is used or integrated. `S1MiniModelInfo.attributedName` exists for user-facing surfaces; do not rebrand it.
+- S1-mini's system prompt and `[Styling:] [Structure:] [Context:]` control line are the trained input format, not suggestions. Changing the wording, or sending values outside the trained sets, silently degrades output. `S1MiniModelTests` pins the exact shape.
+- The S1-mini download URL is pinned to a Hugging Face commit revision so the SHA-256 in `S1MiniModelInfo` stays valid. Bump both together.
 
 ## Coding conventions
 
@@ -124,7 +134,9 @@ Direct distribution uses Sparkle appcast metadata in `docs/appcast.xml`. The App
 
 ## Testing and evaluation
 
-`swift test` covers: install/copy/relaunch helpers, cloud URL validation and safe cloud error text, log redaction and secure-input errors, onboarding reset/resume, speech model metadata, phrase dedup/silence trimming/segmentation/normalization, compatibility and permission helpers.
+`swift test` covers: install/copy/relaunch helpers, cloud URL validation and safe cloud error text, log redaction and secure-input errors, onboarding reset/resume, speech model metadata, phrase dedup/silence trimming/segmentation/normalization, compatibility and permission helpers, and the S1-mini prompt format/chunking.
+
+`LocalTextCleanupTests` runs the real S1-mini weights end to end. It is skipped automatically wherever the model is absent (CI, fresh checkouts) — download it from Settings › Cleanup to enable it.
 
 Manual WER evaluation (records via `ffmpeg`, writes git-ignored `evaluation/test_data/`):
 

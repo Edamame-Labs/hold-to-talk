@@ -28,12 +28,12 @@
 </p>
 
 - **Free and open-source** — no subscription, no paywall. Inspect the code, build it yourself, or install a signed release.
-- **Apple Silicon required** — built around local speech recognition with [sherpa-onnx](https://github.com/k2-fsa/sherpa-onnx) + [NVIDIA Parakeet TDT 0.6B](https://huggingface.co/nvidia/parakeet-tdt-0.6b-v2).
+- **Apple Silicon required** — built around local speech recognition with [sherpa-onnx](https://github.com/k2-fsa/sherpa-onnx) + [NVIDIA Parakeet TDT 0.6B](https://huggingface.co/nvidia/parakeet-tdt-0.6b-v2), and local cleanup with [llama.cpp](https://github.com/ggml-org/llama.cpp) + [Superwhisper S1-mini](https://huggingface.co/superwhisper/s1-mini).
 - **Local by default** — no accounts, no tracking. Audio stays on your Mac unless you choose cloud transcription with your own key.
 - **Bring your own key** — supported Macs can use an OpenAI-compatible API key instead of the local model. Your key, your account, direct to the provider — Hold to Talk never sees your data.
 - **Fast** — optimized for low-latency dictation with an int8-quantized on-device speech model, or cloud models when you want peak accuracy.
 - **Works everywhere** — dictate into any app: Slack, Notes, your IDE, email, browser.
-- **Text cleanup** (optional) — fix grammar, punctuation, and filler words via Apple Intelligence (on-device, macOS 26+), OpenAI, or Anthropic with your own API key.
+- **Text cleanup** (optional) — fix grammar, punctuation, and filler words on-device with [S1-mini by Superwhisper](https://huggingface.co/superwhisper/s1-mini) (any Apple Silicon Mac, English only) or Apple Intelligence (macOS 26+), or in the cloud with OpenAI or Anthropic using your own API key. Set Dictation Language to Multilingual and the English-only model is hidden.
 - **Auto-updates** — direct downloads update in-app via [Sparkle](https://sparkle-project.org).
 - **Stays close at hand** — opens as a normal Mac app and keeps a menu bar status control. Hold a key to record, release to paste.
 
@@ -95,8 +95,11 @@ make test-reset     # full uninstall + reset all state + reset permissions
 | Hotkey | Fn | Fn, Control, Option, Command, Shift, F13-F19, Option+Space, Control+Space, Command+Shift+Space |
 | Transcription profile | Balanced | Fast, Balanced, Best |
 | Transcription provider | On-Device | On-Device, OpenAI (your key) |
-| Text cleanup | On (if available) | On/Off — Apple Intelligence, OpenAI, or Anthropic (your key) |
-| Cleanup prompt | (default) | Customizable instructions |
+| Dictation language | English | English, Multilingual — decides which cleanup providers are offered |
+| Text cleanup | On (if available) | On/Off — S1-mini (on-device), Apple Intelligence, OpenAI, or Anthropic (your key) |
+| Cleanup writing style | Semi-formal | Casual, Semi-casual, Semi-formal, Formal (S1-mini only) |
+| Cleanup formatting | Prose | Prose, Allow lists (S1-mini only) |
+| Cleanup prompt | (default) | Customizable instructions (Apple Intelligence and cloud providers) |
 | Launch at Login | Off | On/Off |
 | Diagnostic logging | Off | On/Off — local only, transcript text redacted |
 
@@ -112,9 +115,11 @@ flowchart LR
     PT --> CL{"Text cleanup"}
     CT --> CL
     CL -->|"Apple Intelligence (on-device)"| TC[TextCleanup]
+    CL -->|"S1-mini (on-device)"| LC["LocalTextCleanup — llama.cpp"]
     CL -->|"OpenAI / Anthropic"| CC[CloudTextCleanup]
     CL -->|"off"| TI[TextInserter]
     TC --> TI
+    LC --> TI
     CC --> TI
     TI --> APP["Previously active app"]
 ```
@@ -126,10 +131,12 @@ AudioRecorder       AVAudioEngine mic capture, resamples to 16 kHz mono
 Transcriber         sherpa-onnx offline recognizer + Silero VAD segmentation
 CloudTranscriber    Optional OpenAI-compatible cloud transcription (your API key)
 TextCleanup         Optional on-device cleanup via Apple Intelligence (macOS 26+)
+LocalTextCleanup    Optional on-device cleanup via S1-mini on llama.cpp (any Apple Silicon)
 CloudTextCleanup    Optional cloud cleanup via OpenAI or Anthropic (your API key)
 TextInserter        CGEvent unicode insertion or clipboard paste (per-app strategy)
 HotkeyManager       Global hold shortcuts, no explicit Input Monitoring request
 ModelManager        Parakeet TDT model download and lifecycle
+CleanupModelManager S1-mini cleanup model download and lifecycle
 RecordingHUD        Floating overlay with live waveform during recording
 OnboardingView      Guided setup: permissions, model download, hotkey test
 SettingsView        SwiftUI settings form

@@ -25,8 +25,8 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup sherpa-onnx
-        run: bash scripts/setup-sherpa-onnx.sh
+      - name: Setup native dependencies
+        run: make setup
 
       - name: Test
         run: swift test
@@ -109,6 +109,21 @@ jobs:
           cp -R Resources/en.lproj "$APP_BUNDLE/Contents/Resources/"
           cp "$APPSTORE_PROFILE_PATH" "$APP_BUNDLE/Contents/embedded.provisionprofile"
 
+          # llama.cpp backs the on-device cleanup model and is linked at build
+          # time, so the app will not launch without it embedded.
+          mkdir -p "$APP_BUNDLE/Contents/Frameworks"
+          LLAMA_FW="$(swift build -c release --show-bin-path)/llama.framework"
+          if [ ! -d "$LLAMA_FW" ]; then
+            echo "llama.framework not found; did 'make setup' run?" >&2
+            exit 1
+          fi
+          rsync -a --delete "$LLAMA_FW" "$APP_BUNDLE/Contents/Frameworks/"
+          install_name_tool -add_rpath @executable_path/../Frameworks "$APP_BUNDLE/Contents/MacOS/$APP_NAME"
+
+          if [ ! -f "$APP_BUNDLE/Contents/Frameworks/llama.framework/Versions/A/llama" ]; then
+            echo "Missing llama.framework in App Store bundle" >&2
+            exit 1
+          fi
           if [ -d "$APP_BUNDLE/Contents/Frameworks/Sparkle.framework" ]; then
             echo "Unexpected Sparkle.framework in App Store bundle" >&2
             exit 1
@@ -143,6 +158,10 @@ jobs:
           cp Resources/HoldToTalk.entitlements "$ENTITLEMENTS_PATH"
           /usr/libexec/PlistBuddy -c "Add :com.apple.application-identifier string $APPSTORE_APPLICATION_IDENTIFIER" "$ENTITLEMENTS_PATH"
           /usr/libexec/PlistBuddy -c "Add :com.apple.developer.team-identifier string $APPSTORE_TEAM_IDENTIFIER" "$ENTITLEMENTS_PATH"
+
+          codesign -f --options runtime --timestamp \
+            -s "$IDENTITY" \
+            "$APP_BUNDLE/Contents/Frameworks/llama.framework"
 
           codesign -f --options runtime --timestamp \
             -s "$IDENTITY" \

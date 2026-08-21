@@ -48,6 +48,7 @@ Cloud features are **off by default**. If you do not add an API key, the app ope
 - Transcribed text is inserted into the app you are using.
 - Hold to Talk does not keep a cloud transcription history.
 - If optional Apple Intelligence cleanup is enabled (macOS 26+), cleanup runs on-device via macOS system features.
+- If optional S1-mini cleanup is enabled, cleanup runs on-device in Hold to Talk itself. The model is downloaded once and then runs entirely offline -- transcript text never leaves your Mac.
 - If cloud text cleanup is enabled, transcription text is sent directly to the provider you configured. It is not sent to Hold to Talk.
 - If you enable local diagnostic logging, transcript text is redacted in those logs by default.
 
@@ -57,6 +58,7 @@ Hold to Talk stores the following on your Mac:
 
 - Preferences (hotkey, transcription profile, cleanup settings)
 - The downloaded Parakeet TDT speech model
+- The downloaded S1-mini cleanup model, only if you enable on-device cleanup
 - Temporary app state for onboarding and operation
 - Optional local diagnostic logs, only if you enable them
 
@@ -69,6 +71,7 @@ The app makes limited network requests:
 | Request | Destination | Purpose |
 |---|---|---|
 | Model download | `github.com/k2-fsa/sherpa-onnx/releases` | One-time download of the Parakeet TDT speech model |
+| Cleanup model download | `huggingface.co/superwhisper/s1-mini-GGUF` | One-time download of the S1-mini cleanup model, only if you enable on-device cleanup |
 | Update check | Sparkle update feed | Checking for app updates (direct-download builds only, not App Store) |
 | Cloud transcription | `api.openai.com` (or custom base URL) | Only if you enable cloud transcription with your own API key |
 | Cloud text cleanup | `api.openai.com` or `api.anthropic.com` (or custom base URL) | Only if you enable cloud cleanup with your own API key |

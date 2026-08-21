@@ -28,6 +28,7 @@ endif
 
 setup:
 	@bash scripts/setup-sherpa-onnx.sh
+	@bash scripts/setup-llama-cpp.sh
 
 build: setup
 	APP_STORE="$(APP_STORE)" swift build -c release
@@ -45,12 +46,17 @@ build: setup
 	elif [ -d ".build/arm64-apple-macosx/release/HoldToTalk_HoldToTalk.bundle" ]; then \
 		cp -R ".build/arm64-apple-macosx/release/HoldToTalk_HoldToTalk.bundle" "$(APP_BUNDLE)/Contents/Resources/"; \
 	fi
+	@LLAMA_FW="$$(swift build -c release --show-bin-path)/llama.framework"; \
+	if [ ! -d "$$LLAMA_FW" ]; then \
+		echo "Error: llama.framework not found. Run 'make setup'." >&2; exit 1; \
+	fi; \
+	rsync -a --delete "$$LLAMA_FW" "$(APP_BUNDLE)/Contents/Frameworks/"
+	@install_name_tool -add_rpath @executable_path/../Frameworks "$(APP_BUNDLE)/Contents/MacOS/$(APP_NAME)" 2>/dev/null || true
 	@if [ "$(APP_STORE)" = "1" ]; then \
 		plutil -remove SUFeedURL "$(APP_BUNDLE)/Contents/Info.plist" 2>/dev/null || true; \
 		plutil -remove SUPublicEDKey "$(APP_BUNDLE)/Contents/Info.plist" 2>/dev/null || true; \
 	else \
 			rsync -a --delete "$(SPARKLE_FRAMEWORK)" "$(APP_BUNDLE)/Contents/Frameworks/"; \
-			install_name_tool -add_rpath @executable_path/../Frameworks "$(APP_BUNDLE)/Contents/MacOS/$(APP_NAME)" 2>/dev/null || true; \
 	fi
 	@if [ "$(SIGNING_IDENTITY)" = "-" ]; then \
 		HTT_STABLE_CODE_IDENTITY=false; \
@@ -60,11 +66,13 @@ build: setup
 	plutil -remove HTTStableCodeIdentity "$(APP_BUNDLE)/Contents/Info.plist" 2>/dev/null || true; \
 	plutil -insert HTTStableCodeIdentity -bool $$HTT_STABLE_CODE_IDENTITY "$(APP_BUNDLE)/Contents/Info.plist"
 	@if [ "$(SIGNING_IDENTITY)" = "-" ]; then \
+		codesign -f -s - "$(APP_BUNDLE)/Contents/Frameworks/llama.framework"; \
 		if [ "$(APP_STORE)" != "1" ]; then \
 			codesign -f --deep -s - "$(APP_BUNDLE)/Contents/Frameworks/Sparkle.framework"; \
 		fi; \
 		codesign -f -s - --entitlements "$(APP_ENTITLEMENTS)" "$(APP_BUNDLE)"; \
 	else \
+		codesign -f --options runtime --timestamp -s "$(SIGNING_IDENTITY)" "$(APP_BUNDLE)/Contents/Frameworks/llama.framework"; \
 		if [ "$(APP_STORE)" != "1" ]; then \
 			codesign -f --deep --options runtime --timestamp -s "$(SIGNING_IDENTITY)" "$(APP_BUNDLE)/Contents/Frameworks/Sparkle.framework"; \
 		fi; \
@@ -78,7 +86,6 @@ install: build
 	@cp -R "$(APP_BUNDLE)" "$(APP_INSTALL_DIR)/"
 	@xattr -dr com.apple.quarantine "$(APP_INSTALL_DIR)/$(APP_DISPLAY_NAME).app" 2>/dev/null || true
 	@echo "Installed to $(APP_INSTALL_DIR)/$(APP_DISPLAY_NAME).app"
-
 fresh-install:
 	@APP_USER="$(APP_USER)" bash scripts/reset-fresh-test.sh --yes
 	@$(MAKE) install
@@ -166,10 +173,16 @@ run: setup
 	elif [ -d ".build/arm64-apple-macosx/debug/HoldToTalk_HoldToTalk.bundle" ]; then \
 		cp -R ".build/arm64-apple-macosx/debug/HoldToTalk_HoldToTalk.bundle" "$(APP_BUNDLE)/Contents/Resources/"; \
 	fi
+	@LLAMA_FW="$$(swift build --show-bin-path)/llama.framework"; \
+	if [ ! -d "$$LLAMA_FW" ]; then \
+		echo "Error: llama.framework not found. Run 'make setup'." >&2; exit 1; \
+	fi; \
+	rsync -a --delete "$$LLAMA_FW" "$(APP_BUNDLE)/Contents/Frameworks/"
+	@install_name_tool -add_rpath @executable_path/../Frameworks "$(APP_BUNDLE)/Contents/MacOS/$(APP_NAME)" 2>/dev/null || true
+	@codesign -f -s - "$(APP_BUNDLE)/Contents/Frameworks/llama.framework"
 	@SPARKLE_FW="$$(swift build --show-bin-path)/Sparkle.framework"; \
 	if [ -d "$$SPARKLE_FW" ]; then \
 		rsync -a --delete "$$SPARKLE_FW" "$(APP_BUNDLE)/Contents/Frameworks/"; \
-		install_name_tool -add_rpath @executable_path/../Frameworks "$(APP_BUNDLE)/Contents/MacOS/$(APP_NAME)" 2>/dev/null || true; \
 		codesign -f --deep -s - "$(APP_BUNDLE)/Contents/Frameworks/Sparkle.framework"; \
 	fi
 	@plutil -remove HTTStableCodeIdentity "$(APP_BUNDLE)/Contents/Info.plist" 2>/dev/null || true

@@ -136,10 +136,41 @@ enum TranscriptionProvider: String, CaseIterable, Identifiable {
     }
 }
 
+// MARK: - Dictation Language
+
+/// Which languages the user dictates in.
+///
+/// Cleanup providers differ in language coverage, so this decides which are
+/// offered. It deliberately does not touch transcription — that already has its
+/// own provider setting.
+enum DictationLanguageMode: String, CaseIterable, Identifiable {
+    case english
+    case multilingual
+
+    var id: String { rawValue }
+
+    var displayName: String {
+        switch self {
+        case .english:      return "English"
+        case .multilingual: return "Multilingual"
+        }
+    }
+
+    var summary: String {
+        switch self {
+        case .english:
+            return "Every cleanup option is available, including the on-device English-only model."
+        case .multilingual:
+            return "Only cleanup providers that handle other languages are offered. \(S1MiniModelInfo.displayName) is English-only, so it is hidden."
+        }
+    }
+}
+
 // MARK: - Cleanup Provider
 
 enum CleanupProvider: String, CaseIterable, Identifiable {
     case appleIntelligence = "apple_intelligence"
+    case localS1Mini = "local_s1_mini"
     case openAI = "openai"
     case anthropic = "anthropic"
 
@@ -148,6 +179,7 @@ enum CleanupProvider: String, CaseIterable, Identifiable {
     var displayName: String {
         switch self {
         case .appleIntelligence: return "Apple Intelligence"
+        case .localS1Mini:       return S1MiniModelInfo.displayName
         case .openAI:            return "OpenAI"
         case .anthropic:         return "Anthropic"
         }
@@ -156,6 +188,7 @@ enum CleanupProvider: String, CaseIterable, Identifiable {
     var defaultModel: String {
         switch self {
         case .appleIntelligence: return ""
+        case .localS1Mini:       return ""
         case .openAI:            return "gpt-4o-mini"
         case .anthropic:         return "claude-haiku-3-5-20241022"
         }
@@ -163,9 +196,70 @@ enum CleanupProvider: String, CaseIterable, Identifiable {
 
     var cloudProvider: CloudProvider? {
         switch self {
-        case .appleIntelligence: return nil
-        case .openAI:            return .openAI
-        case .anthropic:         return .anthropic
+        case .appleIntelligence, .localS1Mini: return nil
+        case .openAI:                          return .openAI
+        case .anthropic:                       return .anthropic
         }
+    }
+
+    /// Whether cleanup runs on this Mac with no network request.
+    var isLocal: Bool {
+        switch self {
+        case .appleIntelligence, .localS1Mini: return true
+        case .openAI, .anthropic:              return false
+        }
+    }
+
+    /// Whether this provider handles languages other than English.
+    ///
+    /// S1-mini was trained on English only, and the model card warns that
+    /// out-of-distribution input produces garbled output rather than failing
+    /// loudly — so it is the one provider gated to English dictation.
+    var supportsMultilingual: Bool {
+        switch self {
+        case .localS1Mini:                            return false
+        case .appleIntelligence, .openAI, .anthropic: return true
+        }
+    }
+
+    func supports(_ languageMode: DictationLanguageMode) -> Bool {
+        languageMode == .english || supportsMultilingual
+    }
+
+    static func available(for languageMode: DictationLanguageMode) -> [CleanupProvider] {
+        allCases.filter { $0.supports(languageMode) }
+    }
+
+    /// Resolves a persisted raw value against the current language mode.
+    ///
+    /// A stored provider can become invalid when the user switches language, so
+    /// this clamps it rather than letting an English-only model see other
+    /// languages. Unknown values fall back the same way.
+    static func resolved(
+        storedRawValue: String?,
+        languageMode: DictationLanguageMode
+    ) -> CleanupProvider {
+        guard let storedRawValue,
+              let stored = CleanupProvider(rawValue: storedRawValue),
+              stored.supports(languageMode) else {
+            return defaultForThisMac(languageMode: languageMode)
+        }
+        return stored
+    }
+
+    private static let appleIntelligenceAvailable: Bool = {
+        TextCleanup.checkAvailability() == .available
+    }()
+
+    /// Apple Intelligence when this Mac has it, otherwise the on-device model
+    /// where the language allows. The default never sends transcripts off the
+    /// machine — a cloud provider is only ever an explicit choice.
+    static func defaultForThisMac(
+        languageMode: DictationLanguageMode = .english
+    ) -> CleanupProvider {
+        if appleIntelligenceAvailable { return .appleIntelligence }
+        return CleanupProvider.localS1Mini.supports(languageMode)
+            ? .localS1Mini
+            : .appleIntelligence
     }
 }
