@@ -13,7 +13,7 @@ if !isAppStoreBuild {
     )
 }
 
-var executableDependencies: [Target.Dependency] = ["sherpa_onnx"]
+var executableDependencies: [Target.Dependency] = ["sherpa_onnx", "llama"]
 
 if !isAppStoreBuild {
     executableDependencies.append("Sparkle")
@@ -48,6 +48,10 @@ let package = Package(
         .binaryTarget(
             name: "sherpa_onnx",
             path: "Frameworks/sherpa_onnx.xcframework"
+        ),
+        .binaryTarget(
+            name: "llama",
+            path: "Frameworks/llama.xcframework"
         ),
         .testTarget(
             name: "HoldToTalkTests",

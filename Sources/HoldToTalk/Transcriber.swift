@@ -47,7 +47,7 @@ actor Transcriber {
     func loadModel(numThreads: Int = 4, hotwords: String = "") async throws {
         // If hotwords changed, recreate the recognizer
         if recognizer != nil && hotwords != currentHotwords {
-            print("[transcriber] Hotwords changed, recreating recognizer...")
+            debugLog("[holdtotalk] Hotwords changed, recreating recognizer")
             recognizer = nil
             hasCompletedDecodeWarmup = false
         }
@@ -67,7 +67,8 @@ actor Transcriber {
         }
 
         currentHotwords = hotwords
-        print("[transcriber] Loading Parakeet TDT 0.6B...")
+        debugLog("[holdtotalk] Loading \(SpeechModelInfo.displayName)...")
+        let modelLoadStart = Date()
         let requestedHotwords = currentHotwords
         let task = Task {
             let loadedRecognizer = try createRecognizer(
@@ -81,7 +82,7 @@ actor Transcriber {
         defer { loadTask = nil }
 
         try await task.value
-        print("[transcriber] Ready.")
+        debugLog("[holdtotalk] Loaded \(SpeechModelInfo.displayName) in \(String(format: "%.2f", Date().timeIntervalSince(modelLoadStart)))s")
     }
 
     func prepareForFirstTranscription(profile: TranscriptionProfile = .balanced, hotwords: String = "") async throws {
@@ -92,11 +93,11 @@ actor Transcriber {
         try await loadModel(numThreads: profile.numThreads, hotwords: hotwords)
         guard let recognizer, !hasCompletedDecodeWarmup else { return }
 
-        print("[transcriber] Running decode warm-up...")
+        let warmupStart = Date()
         let silence = Array(repeating: Float(0), count: 16000) // 1 second of silence
         _ = recognizer.decode(samples: silence, sampleRate: 16000)
         hasCompletedDecodeWarmup = true
-        print("[transcriber] Decode warm-up complete.")
+        debugLog("[holdtotalk] Decode warm-up complete in \(String(format: "%.2f", Date().timeIntervalSince(warmupStart)))s")
     }
 
     /// Transcribe 16 kHz mono float audio to text.
@@ -538,11 +539,11 @@ actor Transcriber {
             decodingMethod = "modified_beam_search"
             let entryCount = trimmedHotwords.components(separatedBy: .newlines)
                 .filter { !$0.trimmingCharacters(in: .whitespaces).isEmpty }.count
-            print("[transcriber] Hotwords enabled (\(entryCount) entries), using modified_beam_search")
+            debugLog("[holdtotalk] Hotwords enabled (\(entryCount) entries), using modified_beam_search")
         } else {
             hotwordsFilePath = ""
             decodingMethod = "greedy_search"
-            print("[transcriber] No hotwords, using greedy_search")
+            debugLog("[holdtotalk] No hotwords, using greedy_search")
         }
 
         var config = sherpaOnnxOfflineRecognizerConfig(

@@ -1,5 +1,6 @@
 .PHONY: setup build install fresh-install verify package package-zip package-dmg package-permission-test-dmg \
- notarize notarize-app notarize-dmg release permissions-reset reset-fresh-test test-reset uninstall run clean
+ notarize notarize-app notarize-dmg release permissions-reset reset-fresh-test test-reset uninstall run clean \
+ _check-distributable-signing
 
 APP_NAME := HoldToTalk
 APP_DISPLAY_NAME := Hold To Talk
@@ -28,6 +29,7 @@ endif
 
 setup:
 	@bash scripts/setup-sherpa-onnx.sh
+	@bash scripts/setup-llama-cpp.sh
 
 build: setup
 	APP_STORE="$(APP_STORE)" swift build -c release
@@ -45,12 +47,17 @@ build: setup
 	elif [ -d ".build/arm64-apple-macosx/release/HoldToTalk_HoldToTalk.bundle" ]; then \
 		cp -R ".build/arm64-apple-macosx/release/HoldToTalk_HoldToTalk.bundle" "$(APP_BUNDLE)/Contents/Resources/"; \
 	fi
+	@LLAMA_FW="$$(swift build -c release --show-bin-path)/llama.framework"; \
+	if [ ! -d "$$LLAMA_FW" ]; then \
+		echo "Error: llama.framework not found. Run 'make setup'." >&2; exit 1; \
+	fi; \
+	rsync -a --delete "$$LLAMA_FW" "$(APP_BUNDLE)/Contents/Frameworks/"
+	@install_name_tool -add_rpath @executable_path/../Frameworks "$(APP_BUNDLE)/Contents/MacOS/$(APP_NAME)" 2>/dev/null || true
 	@if [ "$(APP_STORE)" = "1" ]; then \
 		plutil -remove SUFeedURL "$(APP_BUNDLE)/Contents/Info.plist" 2>/dev/null || true; \
 		plutil -remove SUPublicEDKey "$(APP_BUNDLE)/Contents/Info.plist" 2>/dev/null || true; \
 	else \
 			rsync -a --delete "$(SPARKLE_FRAMEWORK)" "$(APP_BUNDLE)/Contents/Frameworks/"; \
-			install_name_tool -add_rpath @executable_path/../Frameworks "$(APP_BUNDLE)/Contents/MacOS/$(APP_NAME)" 2>/dev/null || true; \
 	fi
 	@if [ "$(SIGNING_IDENTITY)" = "-" ]; then \
 		HTT_STABLE_CODE_IDENTITY=false; \
@@ -60,11 +67,13 @@ build: setup
 	plutil -remove HTTStableCodeIdentity "$(APP_BUNDLE)/Contents/Info.plist" 2>/dev/null || true; \
 	plutil -insert HTTStableCodeIdentity -bool $$HTT_STABLE_CODE_IDENTITY "$(APP_BUNDLE)/Contents/Info.plist"
 	@if [ "$(SIGNING_IDENTITY)" = "-" ]; then \
+		codesign -f -s - "$(APP_BUNDLE)/Contents/Frameworks/llama.framework"; \
 		if [ "$(APP_STORE)" != "1" ]; then \
 			codesign -f --deep -s - "$(APP_BUNDLE)/Contents/Frameworks/Sparkle.framework"; \
 		fi; \
 		codesign -f -s - --entitlements "$(APP_ENTITLEMENTS)" "$(APP_BUNDLE)"; \
 	else \
+		codesign -f --options runtime --timestamp -s "$(SIGNING_IDENTITY)" "$(APP_BUNDLE)/Contents/Frameworks/llama.framework"; \
 		if [ "$(APP_STORE)" != "1" ]; then \
 			codesign -f --deep --options runtime --timestamp -s "$(SIGNING_IDENTITY)" "$(APP_BUNDLE)/Contents/Frameworks/Sparkle.framework"; \
 		fi; \
@@ -78,6 +87,17 @@ install: build
 	@cp -R "$(APP_BUNDLE)" "$(APP_INSTALL_DIR)/"
 	@xattr -dr com.apple.quarantine "$(APP_INSTALL_DIR)/$(APP_DISPLAY_NAME).app" 2>/dev/null || true
 	@echo "Installed to $(APP_INSTALL_DIR)/$(APP_DISPLAY_NAME).app"
+	@if [ "$(SIGNING_IDENTITY)" = "-" ]; then \
+		echo ""; \
+		echo "warning: this is an ad-hoc signed build. Its designated requirement is a bare"; \
+		echo "         cdhash, so macOS binds Accessibility and Input Monitoring to this exact"; \
+		echo "         binary. The next 'make install' invalidates those grants while System"; \
+		echo "         Settings still shows the app enabled."; \
+		echo "         Reinstalling over a notarized release breaks that release's grants too,"; \
+		echo "         since both use the bundle identifier $(BUNDLE_ID)."; \
+		echo "         For permission testing use: SIGNING_IDENTITY=\"Developer ID Application: ...\" make install"; \
+		echo "         To clear stale grants: make permissions-reset"; \
+	fi
 
 fresh-install:
 	@APP_USER="$(APP_USER)" bash scripts/reset-fresh-test.sh --yes
@@ -93,12 +113,12 @@ verify: build
 
 package: _check-direct-distribution package-zip package-dmg
 
-package-zip: _check-direct-distribution build
+package-zip: _check-direct-distribution _check-distributable-signing build
 	@mkdir -p "$(DIST_DIR)"
 	@ditto -c -k --sequesterRsrc --keepParent "$(APP_BUNDLE)" "$(ZIP_PATH)"
 	@echo "Packaged $(ZIP_PATH)"
 
-package-dmg: _check-direct-distribution build
+package-dmg: _check-direct-distribution _check-distributable-signing build
 	@mkdir -p "$(DIST_DIR)"
 	@bash scripts/package-dmg.sh \
 		--app-bundle "$(APP_BUNDLE)" \
@@ -106,6 +126,19 @@ package-dmg: _check-direct-distribution build
 		--output "$(DMG_PATH)"
 	@if [ "$(SIGNING_IDENTITY)" = "-" ]; then \
 		echo "warning: $(DMG_PATH) is ad-hoc signed; Accessibility and Input Monitoring tests across rebuilds may require removing and re-adding Hold To Talk in System Settings."; \
+	fi
+
+# Ad-hoc signing produces a designated requirement of a bare cdhash, so macOS
+# pins TCC grants to that exact binary. Shipping such a build would break every
+# later upgrade's permissions for that user, permanently.
+_check-distributable-signing:
+	@if [ "$(SIGNING_IDENTITY)" = "-" ] && [ "$(ALLOW_ADHOC_PACKAGE)" != "1" ]; then \
+		echo "Error: refusing to package an ad-hoc signed build for distribution." >&2; \
+		echo "  Ad-hoc signing makes the designated requirement a bare cdhash, which pins" >&2; \
+		echo "  the user's Accessibility/Input Monitoring grants to one exact binary." >&2; \
+		echo "  Set SIGNING_IDENTITY to your Developer ID certificate, or pass" >&2; \
+		echo "  ALLOW_ADHOC_PACKAGE=1 for a local-only artifact you will not distribute." >&2; \
+		exit 1; \
 	fi
 
 package-permission-test-dmg: _check-direct-distribution _check-signing package-dmg
@@ -166,10 +199,16 @@ run: setup
 	elif [ -d ".build/arm64-apple-macosx/debug/HoldToTalk_HoldToTalk.bundle" ]; then \
 		cp -R ".build/arm64-apple-macosx/debug/HoldToTalk_HoldToTalk.bundle" "$(APP_BUNDLE)/Contents/Resources/"; \
 	fi
+	@LLAMA_FW="$$(swift build --show-bin-path)/llama.framework"; \
+	if [ ! -d "$$LLAMA_FW" ]; then \
+		echo "Error: llama.framework not found. Run 'make setup'." >&2; exit 1; \
+	fi; \
+	rsync -a --delete "$$LLAMA_FW" "$(APP_BUNDLE)/Contents/Frameworks/"
+	@install_name_tool -add_rpath @executable_path/../Frameworks "$(APP_BUNDLE)/Contents/MacOS/$(APP_NAME)" 2>/dev/null || true
+	@codesign -f -s - "$(APP_BUNDLE)/Contents/Frameworks/llama.framework"
 	@SPARKLE_FW="$$(swift build --show-bin-path)/Sparkle.framework"; \
 	if [ -d "$$SPARKLE_FW" ]; then \
 		rsync -a --delete "$$SPARKLE_FW" "$(APP_BUNDLE)/Contents/Frameworks/"; \
-		install_name_tool -add_rpath @executable_path/../Frameworks "$(APP_BUNDLE)/Contents/MacOS/$(APP_NAME)" 2>/dev/null || true; \
 		codesign -f --deep -s - "$(APP_BUNDLE)/Contents/Frameworks/Sparkle.framework"; \
 	fi
 	@plutil -remove HTTStableCodeIdentity "$(APP_BUNDLE)/Contents/Info.plist" 2>/dev/null || true

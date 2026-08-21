@@ -4,6 +4,8 @@ import Foundation
 let onboardingCompleteDefaultsKey = "onboardingComplete"
 let onboardingStepDefaultsKey = "onboardingStep"
 let onboardingCompletedAppPathDefaultsKey = "onboardingCompletedAppPath"
+let onboardingCompletedAppVersionDefaultsKey = "onboardingCompletedAppVersion"
+let permissionsStaleAfterUpdateDefaultsKey = "permissionsStaleAfterUpdate"
 let onboardingNeedsResumeAfterAppMoveDefaultsKey = "onboardingNeedsResumeAfterAppMove"
 let dismissedInstallPromptDefaultsKey = "dismissedInstallPrompt"
 let whisperModelDefaultsKey = "whisperModel"
@@ -13,9 +15,14 @@ let diagnosticLoggingEnabledDefaultsKey = "diagnosticLoggingEnabled"
 let textCleanupEnabledDefaultsKey = "textCleanupEnabled"
 let textCleanupPromptDefaultsKey = "textCleanupPrompt"
 let hotwordsDefaultsKey = "hotwords"
+let recordingHUDPositionDefaultsKey = "recordingHUDPosition"
+let preferredInputDeviceUIDDefaultsKey = "preferredInputDeviceUID"
 let launchAtLoginDefaultsKey = "launchAtLogin"
 let transcriptionProviderDefaultsKey = "transcriptionProvider"
 let cleanupProviderDefaultsKey = "cleanupProvider"
+let dictationLanguageModeDefaultsKey = "dictationLanguageMode"
+let cleanupStylingDefaultsKey = "cleanupStyling"
+let cleanupStructureDefaultsKey = "cleanupStructure"
 let openaiTranscriptionModelDefaultsKey = "openaiTranscriptionModel"
 let openaiCleanupModelDefaultsKey = "openaiCleanupModel"
 let anthropicCleanupModelDefaultsKey = "anthropicCleanupModel"
@@ -42,6 +49,7 @@ func shouldResetAppStateForFreshOnboarding(defaults: UserDefaults = .standard) -
 func onboardingLaunchPreparation(
     defaults: UserDefaults = .standard,
     currentAppURL: URL = Bundle.main.bundleURL,
+    currentAppVersion: String = currentAppShortVersion(),
     environmentReady: (UserDefaults) -> Bool = { completedOnboardingEnvironmentReady(defaults: $0) }
 ) -> OnboardingLaunchPreparation {
     #if DEBUG
@@ -60,31 +68,103 @@ func onboardingLaunchPreparation(
 
     let currentPath = normalizedAppBundlePath(currentAppURL)
     if let storedPath = defaults.string(forKey: onboardingCompletedAppPathDefaultsKey) {
-        if storedPath == currentPath { return .none }
+        let storedVersion = defaults.string(forKey: onboardingCompletedAppVersionDefaultsKey)
+        let movedApp = storedPath != currentPath
+        // A Sparkle or drag install replaces the bundle at the same path, so the
+        // path alone cannot tell us an update happened. Without the version we
+        // would skip the permission check on exactly the upgrades that break it.
+        let updatedApp = storedVersion != currentAppVersion
+
+        if !movedApp && !updatedApp { return .none }
 
         // App was moved or updated. If all permissions are still granted
         // and the selected transcription provider is ready, just update the
-        // stored path and skip onboarding entirely.
+        // stored identity and skip onboarding entirely.
         if environmentReady(defaults) {
-            defaults.set(currentPath, forKey: onboardingCompletedAppPathDefaultsKey)
+            rememberOnboardingInstallIdentity(
+                defaults: defaults,
+                path: currentPath,
+                version: currentAppVersion
+            )
+            defaults.removeObject(forKey: permissionsStaleAfterUpdateDefaultsKey)
             return .none
         }
 
+        // Permissions read as missing right after the app moved or updated.
+        // macOS often keeps the previous entry listed and switched on while the
+        // grant itself no longer matches, so the usual "enable it" guidance is
+        // wrong here — flag it so the UI can say to remove and re-add instead.
+        defaults.set(true, forKey: permissionsStaleAfterUpdateDefaultsKey)
         return .reopenAfterAppMove
     }
 
     // Existing installs from older builds should keep working without forcing onboarding again.
-    defaults.set(currentPath, forKey: onboardingCompletedAppPathDefaultsKey)
+    rememberOnboardingInstallIdentity(
+        defaults: defaults,
+        path: currentPath,
+        version: currentAppVersion
+    )
     return .none
+}
+
+/// Short version string of the running bundle, used to notice in-place updates.
+func currentAppShortVersion(bundle: Bundle = .main) -> String {
+    bundle.infoDictionary?["CFBundleShortVersionString"] as? String ?? ""
+}
+
+private func rememberOnboardingInstallIdentity(
+    defaults: UserDefaults,
+    path: String,
+    version: String
+) {
+    defaults.set(path, forKey: onboardingCompletedAppPathDefaultsKey)
+    defaults.set(version, forKey: onboardingCompletedAppVersionDefaultsKey)
+}
+
+/// Whether the last launch found permissions missing straight after the app was
+/// moved or updated — the signature of a stale TCC entry rather than a grant the
+/// user never gave.
+func permissionsLikelyStaleAfterUpdate(defaults: UserDefaults = .standard) -> Bool {
+    defaults.bool(forKey: permissionsStaleAfterUpdateDefaultsKey)
+}
+
+func clearStalePermissionFlag(defaults: UserDefaults = .standard) {
+    defaults.removeObject(forKey: permissionsStaleAfterUpdateDefaultsKey)
+}
+
+/// TCC services this app holds grants for.
+///
+/// `PostEvent` is the one that actually gates text insertion —
+/// `CGPreflightPostEventAccess` reads it — even though System Settings shows it
+/// under the Accessibility pane. `ListenEvent` covers the bare-modifier hotkey
+/// monitoring. Leaving either out makes the reset look like it did nothing.
+let tccServicesUsedByApp = ["Microphone", "Accessibility", "PostEvent", "ListenEvent"]
+
+/// Commands that clear this app's TCC grants. An app cannot reset its own
+/// entries — there is no API for it — so the user has to run these in Terminal
+/// when removing and re-adding the app in System Settings is not enough.
+func tccResetCommand(
+    bundleIdentifier: String = Bundle.main.bundleIdentifier ?? "com.holdtotalk.app",
+    services: [String] = tccServicesUsedByApp
+) -> String {
+    services
+        .map { "tccutil reset \($0) \(bundleIdentifier)" }
+        .joined(separator: "; ")
 }
 
 func rememberCompletedOnboardingForCurrentInstall(
     defaults: UserDefaults = .standard,
-    currentAppURL: URL = Bundle.main.bundleURL
+    currentAppURL: URL = Bundle.main.bundleURL,
+    currentAppVersion: String = currentAppShortVersion()
 ) {
     defaults.set(true, forKey: onboardingCompleteDefaultsKey)
     defaults.removeObject(forKey: onboardingNeedsResumeAfterAppMoveDefaultsKey)
-    defaults.set(normalizedAppBundlePath(currentAppURL), forKey: onboardingCompletedAppPathDefaultsKey)
+    defaults.removeObject(forKey: permissionsStaleAfterUpdateDefaultsKey)
+    rememberOnboardingInstallIdentity(
+        defaults: defaults,
+        path: normalizedAppBundlePath(currentAppURL),
+        version: currentAppVersion
+    )
 }
 
 func prepareOnboardingToResumeAfterAppMove(defaults: UserDefaults = .standard) {

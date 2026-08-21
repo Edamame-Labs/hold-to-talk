@@ -5,12 +5,14 @@ import AVFoundation
 struct SettingsView: View {
     @ObservedObject var engine: DictationEngine
     @ObservedObject var modelManager: ModelManager
+    @ObservedObject var cleanupModelManager: CleanupModelManager
     var updater: (any AppUpdateDriver)? = nil
     @Environment(\.dismiss) private var dismiss
 
     @State private var launchAtLogin: Bool = UserDefaults.standard.bool(forKey: launchAtLoginDefaultsKey)
     @State private var isRunningEnvironmentFix = false
     @State private var pendingFixKeyboardAccess = false
+    @State private var availableInputs: [AudioInputDeviceInfo] = []
     @State private var diagnosticsMessage: String?
     @State private var selectedSection: SettingsSection = .general
     @AppStorage(diagnosticLoggingEnabledDefaultsKey) private var diagnosticLoggingEnabled = false
@@ -228,7 +230,19 @@ struct SettingsView: View {
         }
     }
 
+    // Overlay placement, then the hold key itself.
+    @ViewBuilder
     private var hotkeySection: some View {
+        Section("Recording Overlay") {
+            Picker("Position", selection: $engine.recordingHUDPosition) {
+                ForEach(RecordingHUDPosition.allCases) { position in
+                    Text(position.displayName).tag(position.rawValue)
+                }
+            }
+            helperText(engine.resolvedRecordingHUDPosition.summary)
+            helperText("The overlay never takes clicks — you can keep working underneath it while dictating.")
+        }
+
         Section("Hold Key") {
             helperText("Choose what you hold while speaking. Release the key to transcribe and insert text.")
 
@@ -240,7 +254,42 @@ struct SettingsView: View {
         }
     }
 
+    // Two sections now: microphone selection, then dictation itself.
+    @ViewBuilder
     private var dictationSection: some View {
+        Section("Microphone") {
+            Picker("Microphone", selection: $engine.preferredInputDeviceUID) {
+                Text("Follow System Setting").tag("")
+                ForEach(availableInputs) { device in
+                    Text(device.name).tag(device.uid)
+                }
+            }
+            .onChange(of: engine.preferredInputDeviceUID) {
+                engine.reloadInputDevice()
+            }
+
+            if AudioInputDevice.preferredInputIsMissing(
+                preferredUID: engine.preferredInputDeviceUID,
+                available: availableInputs
+            ) {
+                Label(
+                    "That microphone isn't connected. Using the system input until it is back.",
+                    systemImage: "exclamationmark.triangle.fill"
+                )
+                .font(.caption)
+                .foregroundStyle(.orange)
+            }
+
+            if let device = engine.resolvedInputDevice, device.isBluetooth {
+                bluetoothInputNotice(device)
+            } else {
+                helperText("Hold to Talk follows the input chosen in System Settings unless you pick one here.")
+            }
+        }
+        .task {
+            availableInputs = AudioInputDevice.availableInputs()
+        }
+
         Section("Dictation") {
             helperText("Dictation turns speech into text. Cleanup happens afterward and can use a different provider.")
 
@@ -337,8 +386,15 @@ struct SettingsView: View {
             Toggle("Clean up transcribed text", isOn: $engine.textCleanupEnabled)
 
             if engine.textCleanupEnabled {
+                Picker("Dictation Language", selection: $engine.dictationLanguageMode) {
+                    ForEach(DictationLanguageMode.allCases) { mode in
+                        Text(mode.displayName).tag(mode.rawValue)
+                    }
+                }
+                helperText(engine.resolvedLanguageMode.summary)
+
                 Picker("Cleanup Provider", selection: $engine.cleanupProvider) {
-                    ForEach(CleanupProvider.allCases) { provider in
+                    ForEach(CleanupProvider.available(for: engine.resolvedLanguageMode)) { provider in
                         Text(cleanupProviderLabel(provider)).tag(provider.rawValue)
                     }
                 }
@@ -363,6 +419,32 @@ struct SettingsView: View {
                     Text("Text is cleaned up on-device to fix punctuation, repeated words, and filler words.")
                         .font(.caption)
                         .foregroundStyle(.secondary)
+                }
+
+                if engine.resolvedCleanupProvider == .localS1Mini {
+                    cleanupModelStatusView
+
+                    if cleanupModelManager.isDownloaded {
+                        Picker("Writing Style", selection: $engine.cleanupStyling) {
+                            ForEach(CleanupStyling.allCases) { styling in
+                                Text(styling.displayName).tag(styling.rawValue)
+                            }
+                        }
+                        helperText(engine.resolvedCleanupStyling.summary)
+
+                        Picker("Formatting", selection: $engine.cleanupStructure) {
+                            ForEach(CleanupStructure.allCases) { structure in
+                                Text(structure.displayName).tag(structure.rawValue)
+                            }
+                        }
+                        helperText(engine.resolvedCleanupStructure.summary)
+                    }
+
+                    DisclosureGroup("Model Details") {
+                        ModelTrustView.cleanupModel
+                    }
+
+                    helperText("Runs \(S1MiniModelInfo.displayName) by Superwhisper on this Mac with llama.cpp. Works without Apple Intelligence, on any Apple Silicon Mac. English only — switch Dictation Language to Multilingual for other languages.")
                 }
 
                 if engine.resolvedCleanupProvider == .openAI {
@@ -413,31 +495,134 @@ struct SettingsView: View {
                     helperText("Uses the Anthropic messages API.")
                 }
 
-                DisclosureGroup("Cleanup Instructions") {
-                    TextEditor(text: $engine.textCleanupPrompt)
-                        .font(.system(.caption, design: .monospaced))
-                        .frame(minHeight: 80, maxHeight: 120)
-                        .scrollContentBackground(.hidden)
-                        .padding(4)
-                        .background(.background)
-                        .clipShape(RoundedRectangle(cornerRadius: 4))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 4)
-                                .stroke(.separator)
-                        )
+                if engine.resolvedCleanupProvider != .localS1Mini {
+                    DisclosureGroup("Cleanup Instructions") {
+                        TextEditor(text: $engine.textCleanupPrompt)
+                            .font(.system(.caption, design: .monospaced))
+                            .frame(minHeight: 80, maxHeight: 120)
+                            .scrollContentBackground(.hidden)
+                            .padding(4)
+                            .background(.background)
+                            .clipShape(RoundedRectangle(cornerRadius: 4))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 4)
+                                    .stroke(.separator)
+                            )
 
-                    HStack {
-                        Spacer()
-                        if engine.textCleanupPrompt != TextCleanup.defaultPrompt {
-                            Button("Reset to Default") {
-                                engine.textCleanupPrompt = TextCleanup.defaultPrompt
+                        HStack {
+                            Spacer()
+                            if engine.textCleanupPrompt != TextCleanup.defaultPrompt {
+                                Button("Reset to Default") {
+                                    engine.textCleanupPrompt = TextCleanup.defaultPrompt
+                                }
+                                .controlSize(.small)
                             }
-                            .controlSize(.small)
                         }
                     }
                 }
             }
         }
+        .onChange(of: engine.dictationLanguageMode) {
+            engine.normalizeCleanupProviderForLanguage()
+        }
+        .onChange(of: engine.cleanupProvider) {
+            engine.reloadCleanupProvider()
+        }
+        .onChange(of: engine.textCleanupEnabled) {
+            engine.reloadCleanupProvider()
+        }
+        .onChange(of: cleanupModelManager.isDownloaded) {
+            engine.reloadCleanupProvider()
+        }
+    }
+
+    /// Bluetooth headsets cannot be a microphone and a good speaker at once, so
+    /// say what choosing one costs instead of quietly switching away from it.
+    @ViewBuilder
+    private func bluetoothInputNotice(_ device: AudioInputDeviceInfo) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Label("\(device.name) is a Bluetooth microphone", systemImage: "info.circle.fill")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.orange)
+
+            Text("While it is used as a microphone, Bluetooth drops it out of high-quality stereo into call mode — everything you hear through it becomes quieter and mono. That is a limit of Bluetooth itself, not of Hold to Talk.")
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+
+            Text("Recording also starts about 140ms slower, because keeping this device ready would hold your audio in call mode the whole time the app is running. Choose a built-in or wired microphone to avoid both.")
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .padding(.vertical, 2)
+    }
+
+    // MARK: - Cleanup Model Status
+
+    @ViewBuilder
+    private var cleanupModelStatusView: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack {
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(S1MiniModelInfo.attributedName)
+                        .fontWeight(.semibold)
+                    Text(cleanupModelManager.isDownloaded
+                         ? (cleanupModelManager.diskSize() ?? S1MiniModelInfo.sizeLabel)
+                         : S1MiniModelInfo.sizeLabel)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+
+                Spacer()
+
+                if cleanupModelManager.isDownloaded {
+                    HStack(spacing: 8) {
+                        Image(systemName: "checkmark.circle.fill")
+                            .foregroundStyle(.green)
+                        Button(role: .destructive) {
+                            Task { await cleanupModelManager.deleteModel() }
+                        } label: {
+                            Image(systemName: "trash")
+                                .font(.caption)
+                        }
+                        .buttonStyle(.borderless)
+                    }
+                } else if cleanupModelManager.isDownloading {
+                    Button("Cancel") {
+                        cleanupModelManager.cancelDownload()
+                    }
+                    .controlSize(.small)
+                } else {
+                    Button("Download") {
+                        cleanupModelManager.download()
+                    }
+                    .controlSize(.small)
+                }
+            }
+
+            if cleanupModelManager.isDownloading {
+                ProgressView(value: cleanupModelManager.downloadProgress)
+                    .progressViewStyle(.linear)
+                Text("\(Int(cleanupModelManager.downloadProgress * 100))%")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+            }
+
+            if !cleanupModelManager.isDownloaded && !cleanupModelManager.isDownloading {
+                Text("Cleanup is skipped until this model is downloaded.")
+                    .font(.caption2)
+                    .foregroundStyle(.orange)
+            }
+
+            if let error = cleanupModelManager.downloadError {
+                Text(error)
+                    .font(.caption2)
+                    .foregroundStyle(.red)
+                    .lineLimit(2)
+            }
+        }
+        .padding(.vertical, 4)
     }
 
     private var connectionsSection: some View {
@@ -527,6 +712,11 @@ struct SettingsView: View {
 
     private var diagnosticsSection: some View {
         Section("Diagnostics") {
+            if permissionsLikelyStaleAfterUpdate(), !engine.hasPostEvent || !engine.hasMicrophone {
+                StalePermissionRecoveryView(maxWidth: nil)
+                    .padding(.vertical, 4)
+            }
+
             helperText("Use this tab when something is not recording, transcribing, or inserting text.")
 
             statusRow(
@@ -596,6 +786,8 @@ struct SettingsView: View {
         switch provider {
         case .appleIntelligence:
             return "Local (Apple Intelligence)"
+        case .localS1Mini:
+            return "Local (\(S1MiniModelInfo.attributedName))"
         case .openAI:
             return "Cloud (OpenAI)"
         case .anthropic:

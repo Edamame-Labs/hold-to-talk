@@ -33,7 +33,7 @@ enum CloudTextCleanup {
                     text, apiKey: apiKey, model: model, prompt: prompt,
                     baseURL: baseURL ?? CloudProvider.anthropic.defaultBaseURL
                 )
-            case .appleIntelligence:
+            case .appleIntelligence, .localS1Mini:
                 return Result(text: text, userFacingError: nil)
             }
             let cleaned = TextCleanup.validatedCleanedOutput(raw: text, cleaned: result)

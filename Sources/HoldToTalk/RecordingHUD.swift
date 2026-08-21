@@ -1,16 +1,123 @@
 import SwiftUI
 import AppKit
 
+/// Where the recording overlay sits.
+enum RecordingHUDPosition: String, CaseIterable, Identifiable, Sendable {
+    case bottom
+    case top
+    /// Near the mouse pointer, which is usually where the user is looking.
+    case cursor
+
+    var id: String { rawValue }
+
+    var displayName: String {
+        switch self {
+        case .bottom: return "Bottom"
+        case .top:    return "Top"
+        case .cursor: return "Follow Pointer"
+        }
+    }
+
+    var summary: String {
+        switch self {
+        case .bottom:
+            return "Along the bottom edge, above the Dock."
+        case .top:
+            return "Along the top edge, below the menu bar."
+        case .cursor:
+            return "Next to the mouse pointer, on that screen only."
+        }
+    }
+}
+
+/// Gap between the overlay and the screen edge it hugs.
+let recordingHUDEdgeMargin: CGFloat = 20
+/// Gap between the overlay and the pointer, so it never sits under the cursor.
+let recordingHUDCursorOffset: CGFloat = 18
+
 func recordingHUDRestingOrigin(
     screenFrame: CGRect,
     visibleFrame: CGRect,
     panelSize: CGSize,
     shadowInset: CGFloat
 ) -> CGPoint {
-    CGPoint(
-        x: screenFrame.midX - panelSize.width / 2,
-        y: visibleFrame.minY + 20 - shadowInset
+    recordingHUDOrigin(
+        position: .bottom,
+        screenFrame: screenFrame,
+        visibleFrame: visibleFrame,
+        panelSize: panelSize,
+        shadowInset: shadowInset,
+        cursorPoint: nil
     )
+}
+
+/// Placement for one screen.
+///
+/// `shadowInset` is transparent padding baked into the panel so the drop shadow
+/// is not clipped, so every edge calculation has to subtract it — otherwise the
+/// overlay looks like it is floating a shadow's width away from the edge.
+///
+/// Cursor placement is clamped to the visible frame, so the overlay stays fully
+/// on screen even when the pointer is in a corner.
+func recordingHUDOrigin(
+    position: RecordingHUDPosition,
+    screenFrame: CGRect,
+    visibleFrame: CGRect,
+    panelSize: CGSize,
+    shadowInset: CGFloat,
+    cursorPoint: CGPoint?
+) -> CGPoint {
+    switch position {
+    case .bottom:
+        return CGPoint(
+            x: screenFrame.midX - panelSize.width / 2,
+            y: visibleFrame.minY + recordingHUDEdgeMargin - shadowInset
+        )
+    case .top:
+        return CGPoint(
+            x: screenFrame.midX - panelSize.width / 2,
+            y: visibleFrame.maxY - panelSize.height - recordingHUDEdgeMargin + shadowInset
+        )
+    case .cursor:
+        guard let cursorPoint else {
+            return recordingHUDOrigin(
+                position: .bottom,
+                screenFrame: screenFrame,
+                visibleFrame: visibleFrame,
+                panelSize: panelSize,
+                shadowInset: shadowInset,
+                cursorPoint: nil
+            )
+        }
+        // Below the pointer by default; the clamp lifts it back up near the
+        // bottom edge rather than letting it hang off screen.
+        let desired = CGPoint(
+            x: cursorPoint.x - panelSize.width / 2,
+            y: cursorPoint.y - panelSize.height + shadowInset - recordingHUDCursorOffset
+        )
+        let minX = visibleFrame.minX - shadowInset
+        let maxX = visibleFrame.maxX - panelSize.width + shadowInset
+        let minY = visibleFrame.minY - shadowInset
+        let maxY = visibleFrame.maxY - panelSize.height + shadowInset
+        return CGPoint(
+            x: min(max(desired.x, minX), max(minX, maxX)),
+            y: min(max(desired.y, minY), max(minY, maxY))
+        )
+    }
+}
+
+/// Makes the HUD purely visual.
+///
+/// The overlay shows state and a waveform and has nothing to click, but a
+/// borderless panel still swallows every click inside its frame — a 332x108
+/// area at the bottom of *each* screen, over whatever the user was trying to
+/// reach while dictating. Not activating is not enough on its own; the panel
+/// has to opt out of hit-testing entirely.
+///
+/// If the HUD ever gains a control, this has to go and the panel needs real
+/// hit-testing instead.
+func configureHUDPanelForPassthrough(_ panel: NSPanel) {
+    panel.ignoresMouseEvents = true
 }
 
 // MARK: - Non-activating Panel
@@ -68,7 +175,7 @@ final class RecordingHUD {
     private let model = HUDModel()
     /// Extra inset around the capsule so the drop shadow is not clipped by the panel edge.
     static let shadowInset: CGFloat = 20
-    private static let size = CGSize(width: 292 + shadowInset * 2, height: 68 + shadowInset * 2)
+    private static let size = CGSize(width: 184 + shadowInset * 2, height: 44 + shadowInset * 2)
     /// True while an animateOut() is in flight; cleared on completion or when interrupted by a new show request.
     private var isAnimatingOut = false
 
@@ -106,8 +213,31 @@ final class RecordingHUD {
 
     // MARK: - Panels
 
+    /// The user's chosen placement, read fresh so a Settings change applies to
+    /// the next dictation without restarting.
+    private var position: RecordingHUDPosition {
+        RecordingHUDPosition(
+            rawValue: UserDefaults.standard.string(forKey: recordingHUDPositionDefaultsKey) ?? ""
+        ) ?? .bottom
+    }
+
+    /// Pointer location in screen coordinates, and the screen it is on.
+    private func cursorPlacement() -> (point: CGPoint, screen: NSScreen)? {
+        let point = NSEvent.mouseLocation
+        let screen = NSScreen.screens.first { $0.frame.contains(point) }
+            ?? NSScreen.main
+        guard let screen else { return nil }
+        return (point, screen)
+    }
+
     private func ensurePanels() {
         guard screenPanels.isEmpty else { return }
+        // Following the pointer means one overlay on the screen the pointer is
+        // on; showing it on every display would put copies where nobody looks.
+        if position == .cursor, let placement = cursorPlacement() {
+            screenPanels = [ScreenPanel(screen: placement.screen, panel: makePanel())]
+            return
+        }
         screenPanels = NSScreen.screens.map { screen in
             ScreenPanel(screen: screen, panel: makePanel())
         }
@@ -130,6 +260,7 @@ final class RecordingHUD {
         ]
         panel.isMovable = false
         panel.isMovableByWindowBackground = false
+        configureHUDPanelForPassthrough(panel)
 
         let hosting = TransparentHostingView(rootView: HUDContentView(model: model))
         hosting.frame = NSRect(origin: .zero, size: Self.size)
@@ -141,11 +272,15 @@ final class RecordingHUD {
     // MARK: - Positioning
 
     private func restingOrigin(for screen: NSScreen) -> NSPoint {
-        recordingHUDRestingOrigin(
+        let chosen = position
+        let cursorPoint: CGPoint? = chosen == .cursor ? cursorPlacement()?.point : nil
+        return recordingHUDOrigin(
+            position: chosen,
             screenFrame: screen.frame,
             visibleFrame: screen.visibleFrame,
             panelSize: Self.size,
-            shadowInset: Self.shadowInset
+            shadowInset: Self.shadowInset,
+            cursorPoint: cursorPoint
         )
     }
 
@@ -214,37 +349,27 @@ private struct HUDContentView: View {
         model.state == .recording ? "Listening" : "Transcribing"
     }
 
-    private var subtitle: String {
-        model.state == .recording ? "Release to transcribe" : "Turning speech into text"
-    }
-
     var body: some View {
-        HStack(spacing: 12) {
+        HStack(spacing: 9) {
             ZStack {
                 Circle()
                     .fill(accentColor.opacity(0.14))
-                    .frame(width: 42, height: 42)
+                    .frame(width: 28, height: 28)
 
                 if model.state == .recording {
                     RecordingWaveView(levels: model.recordingLevels)
-                        .frame(width: 28, height: 22)
+                        .frame(width: 19, height: 15)
                 } else {
                     Image(systemName: "waveform.badge.magnifyingglass")
-                        .font(.system(size: 16, weight: .semibold))
+                        .font(.system(size: 12, weight: .semibold))
                         .foregroundStyle(accentColor)
                         .symbolEffect(.pulse)
                 }
             }
 
-            VStack(alignment: .leading, spacing: 3) {
-                Text(title)
-                    .font(.system(size: 14, weight: .semibold, design: .rounded))
-                    .foregroundStyle(.primary)
-
-                Text(subtitle)
-                    .font(.system(size: 11, weight: .medium, design: .rounded))
-                    .foregroundStyle(.secondary)
-            }
+            Text(title)
+                .font(.system(size: 12, weight: .semibold, design: .rounded))
+                .foregroundStyle(.primary)
 
             Spacer(minLength: 0)
 
@@ -252,10 +377,10 @@ private struct HUDContentView: View {
                 ZStack {
                     Circle()
                         .fill(accentColor.opacity(0.18))
-                        .frame(width: 18, height: 18)
+                        .frame(width: 14, height: 14)
                     Circle()
                         .fill(accentColor)
-                        .frame(width: 7, height: 7)
+                        .frame(width: 6, height: 6)
                 }
                 .symbolEffect(.pulse)
             } else {
@@ -264,8 +389,8 @@ private struct HUDContentView: View {
                     .tint(accentColor)
             }
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 13)
+        .padding(.horizontal, 11)
+        .padding(.vertical, 8)
         .background {
             Capsule()
                 .fill(.ultraThinMaterial)

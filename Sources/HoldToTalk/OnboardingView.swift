@@ -394,7 +394,7 @@ struct OnboardingView: View {
 
     private var defaultSpeechModeDescription: String {
         systemCompatibility.isAppleSiliconMac
-            ? "Local Parakeet model + Apple Intelligence cleanup when available"
+            ? "Local Parakeet model + on-device cleanup"
             : "Apple Silicon required for local Parakeet transcription"
     }
 
@@ -455,6 +455,10 @@ struct OnboardingView: View {
                 .fixedSize(horizontal: false, vertical: true)
                 .frame(maxWidth: onboardingContentWidth)
 
+            if showsStaleUpdateNotice {
+                staleUpdateRecoveryCard
+            }
+
             permissionsProgressCard
 
             VStack(spacing: 10) {
@@ -494,6 +498,13 @@ struct OnboardingView: View {
                         }
                         .buttonStyle(.bordered)
                         .controlSize(.small)
+                        if !showsStaleUpdateNotice {
+                            Text("Still pending after a relaunch? Remove Hold To Talk from the Accessibility list with the \u{2212} button, then add it again — re-enabling the existing entry does not always work.")
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
+                                .multilineTextAlignment(.center)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
                     } else {
                         Text("This build is ad-hoc signed, so relaunch may not refresh Keyboard Access after a rebuild.")
                             .font(.caption2)
@@ -668,6 +679,14 @@ struct OnboardingView: View {
             RoundedRectangle(cornerRadius: 10)
                 .strokeBorder(active && !granted ? Color.accentColor.opacity(0.40) : Color.clear)
         )
+    }
+
+    private var showsStaleUpdateNotice: Bool {
+        permissionsLikelyStaleAfterUpdate() && !hasAllPermissions
+    }
+
+    private var staleUpdateRecoveryCard: some View {
+        StalePermissionRecoveryView(maxWidth: onboardingContentWidth)
     }
 
     @ViewBuilder
