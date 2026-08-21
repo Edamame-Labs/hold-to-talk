@@ -36,6 +36,138 @@ final class OnboardingResetHelperTests: XCTestCase {
         )
     }
 
+    // MARK: - In-place updates
+    //
+    // A Sparkle or drag install replaces the bundle at the same path, so the
+    // path alone cannot tell us an update happened. macOS binds Accessibility
+    // and Input Monitoring to the app's code identity, and a stale entry stays
+    // listed and switched on while no longer granting anything — so an upgrade
+    // must re-verify rather than assume.
+
+    func testSameVersionAtSamePathSkipsTheCheckEntirely() {
+        let defaults = UserDefaults(suiteName: #function)!
+        defer { defaults.removePersistentDomain(forName: #function) }
+
+        let appURL = URL(fileURLWithPath: "/Applications/HoldToTalk.app", isDirectory: true)
+        defaults.set(true, forKey: onboardingCompleteDefaultsKey)
+        defaults.set(appURL.path, forKey: onboardingCompletedAppPathDefaultsKey)
+        defaults.set("2.2.1", forKey: onboardingCompletedAppVersionDefaultsKey)
+
+        var checked = false
+        XCTAssertEqual(
+            onboardingLaunchPreparation(
+                defaults: defaults,
+                currentAppURL: appURL,
+                currentAppVersion: "2.2.1",
+                environmentReady: { _ in checked = true; return true }
+            ),
+            .none
+        )
+        XCTAssertFalse(checked, "An unchanged install should not pay for a permission check")
+    }
+
+    func testInPlaceUpdateWithHealthyPermissionsJustRecordsTheNewVersion() {
+        let defaults = UserDefaults(suiteName: #function)!
+        defer { defaults.removePersistentDomain(forName: #function) }
+
+        let appURL = URL(fileURLWithPath: "/Applications/HoldToTalk.app", isDirectory: true)
+        defaults.set(true, forKey: onboardingCompleteDefaultsKey)
+        defaults.set(appURL.path, forKey: onboardingCompletedAppPathDefaultsKey)
+        defaults.set("2.2.1", forKey: onboardingCompletedAppVersionDefaultsKey)
+
+        XCTAssertEqual(
+            onboardingLaunchPreparation(
+                defaults: defaults,
+                currentAppURL: appURL,
+                currentAppVersion: "2.3.0",
+                environmentReady: { _ in true }
+            ),
+            .none
+        )
+        XCTAssertEqual(defaults.string(forKey: onboardingCompletedAppVersionDefaultsKey), "2.3.0")
+        XCTAssertFalse(permissionsLikelyStaleAfterUpdate(defaults: defaults))
+    }
+
+    func testInPlaceUpdateWithBrokenPermissionsFlagsThemAsStale() {
+        let defaults = UserDefaults(suiteName: #function)!
+        defer { defaults.removePersistentDomain(forName: #function) }
+
+        let appURL = URL(fileURLWithPath: "/Applications/HoldToTalk.app", isDirectory: true)
+        defaults.set(true, forKey: onboardingCompleteDefaultsKey)
+        defaults.set(appURL.path, forKey: onboardingCompletedAppPathDefaultsKey)
+        defaults.set("2.2.1", forKey: onboardingCompletedAppVersionDefaultsKey)
+
+        // Same path, new version: previously this returned .none and the user
+        // was left with a hotkey that silently did nothing.
+        XCTAssertEqual(
+            onboardingLaunchPreparation(
+                defaults: defaults,
+                currentAppURL: appURL,
+                currentAppVersion: "2.3.0",
+                environmentReady: { _ in false }
+            ),
+            .reopenAfterAppMove
+        )
+        XCTAssertTrue(permissionsLikelyStaleAfterUpdate(defaults: defaults))
+    }
+
+    func testStaleFlagClearsOncePermissionsRecover() {
+        let defaults = UserDefaults(suiteName: #function)!
+        defer { defaults.removePersistentDomain(forName: #function) }
+
+        let appURL = URL(fileURLWithPath: "/Applications/HoldToTalk.app", isDirectory: true)
+        defaults.set(true, forKey: onboardingCompleteDefaultsKey)
+        defaults.set(appURL.path, forKey: onboardingCompletedAppPathDefaultsKey)
+        defaults.set("2.2.1", forKey: onboardingCompletedAppVersionDefaultsKey)
+        defaults.set(true, forKey: permissionsStaleAfterUpdateDefaultsKey)
+
+        _ = onboardingLaunchPreparation(
+            defaults: defaults,
+            currentAppURL: appURL,
+            currentAppVersion: "2.3.0",
+            environmentReady: { _ in true }
+        )
+        XCTAssertFalse(permissionsLikelyStaleAfterUpdate(defaults: defaults))
+    }
+
+    func testCompletingOnboardingRecordsVersionAndClearsStaleFlag() {
+        let defaults = UserDefaults(suiteName: #function)!
+        defer { defaults.removePersistentDomain(forName: #function) }
+
+        defaults.set(true, forKey: permissionsStaleAfterUpdateDefaultsKey)
+        let appURL = URL(fileURLWithPath: "/Applications/HoldToTalk.app", isDirectory: true)
+
+        rememberCompletedOnboardingForCurrentInstall(
+            defaults: defaults,
+            currentAppURL: appURL,
+            currentAppVersion: "2.3.0"
+        )
+
+        XCTAssertEqual(defaults.string(forKey: onboardingCompletedAppVersionDefaultsKey), "2.3.0")
+        XCTAssertFalse(permissionsLikelyStaleAfterUpdate(defaults: defaults))
+    }
+
+    func testTCCResetCommandCoversEveryServiceTheAppUses() {
+        let command = tccResetCommand(bundleIdentifier: "com.holdtotalk.app")
+
+        // PostEvent is the service CGPreflightPostEventAccess actually reads, so
+        // omitting it makes the reset appear to do nothing for text insertion.
+        for service in ["Microphone", "Accessibility", "PostEvent", "ListenEvent"] {
+            XCTAssertTrue(
+                command.contains("tccutil reset \(service) com.holdtotalk.app"),
+                "reset command is missing \(service)"
+            )
+        }
+    }
+
+    func testTCCResetCommandMatchesTheServicesTheResetScriptUses() {
+        // scripts/reset-fresh-test.sh is the tested path; the in-app command
+        // must not drift from it.
+        for service in ["Microphone", "Accessibility", "PostEvent"] {
+            XCTAssertTrue(tccServicesUsedByApp.contains(service))
+        }
+    }
+
     func testOnboardingLaunchPreparationReopensOnboardingAfterAppMove() {
         let defaults = UserDefaults(suiteName: #function)!
         defer { defaults.removePersistentDomain(forName: #function) }

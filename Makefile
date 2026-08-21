@@ -1,5 +1,6 @@
 .PHONY: setup build install fresh-install verify package package-zip package-dmg package-permission-test-dmg \
- notarize notarize-app notarize-dmg release permissions-reset reset-fresh-test test-reset uninstall run clean
+ notarize notarize-app notarize-dmg release permissions-reset reset-fresh-test test-reset uninstall run clean \
+ _check-distributable-signing
 
 APP_NAME := HoldToTalk
 APP_DISPLAY_NAME := Hold To Talk
@@ -86,6 +87,18 @@ install: build
 	@cp -R "$(APP_BUNDLE)" "$(APP_INSTALL_DIR)/"
 	@xattr -dr com.apple.quarantine "$(APP_INSTALL_DIR)/$(APP_DISPLAY_NAME).app" 2>/dev/null || true
 	@echo "Installed to $(APP_INSTALL_DIR)/$(APP_DISPLAY_NAME).app"
+	@if [ "$(SIGNING_IDENTITY)" = "-" ]; then \
+		echo ""; \
+		echo "warning: this is an ad-hoc signed build. Its designated requirement is a bare"; \
+		echo "         cdhash, so macOS binds Accessibility and Input Monitoring to this exact"; \
+		echo "         binary. The next 'make install' invalidates those grants while System"; \
+		echo "         Settings still shows the app enabled."; \
+		echo "         Reinstalling over a notarized release breaks that release's grants too,"; \
+		echo "         since both use the bundle identifier $(BUNDLE_ID)."; \
+		echo "         For permission testing use: SIGNING_IDENTITY=\"Developer ID Application: ...\" make install"; \
+		echo "         To clear stale grants: make permissions-reset"; \
+	fi
+
 fresh-install:
 	@APP_USER="$(APP_USER)" bash scripts/reset-fresh-test.sh --yes
 	@$(MAKE) install
@@ -100,12 +113,12 @@ verify: build
 
 package: _check-direct-distribution package-zip package-dmg
 
-package-zip: _check-direct-distribution build
+package-zip: _check-direct-distribution _check-distributable-signing build
 	@mkdir -p "$(DIST_DIR)"
 	@ditto -c -k --sequesterRsrc --keepParent "$(APP_BUNDLE)" "$(ZIP_PATH)"
 	@echo "Packaged $(ZIP_PATH)"
 
-package-dmg: _check-direct-distribution build
+package-dmg: _check-direct-distribution _check-distributable-signing build
 	@mkdir -p "$(DIST_DIR)"
 	@bash scripts/package-dmg.sh \
 		--app-bundle "$(APP_BUNDLE)" \
@@ -113,6 +126,19 @@ package-dmg: _check-direct-distribution build
 		--output "$(DMG_PATH)"
 	@if [ "$(SIGNING_IDENTITY)" = "-" ]; then \
 		echo "warning: $(DMG_PATH) is ad-hoc signed; Accessibility and Input Monitoring tests across rebuilds may require removing and re-adding Hold To Talk in System Settings."; \
+	fi
+
+# Ad-hoc signing produces a designated requirement of a bare cdhash, so macOS
+# pins TCC grants to that exact binary. Shipping such a build would break every
+# later upgrade's permissions for that user, permanently.
+_check-distributable-signing:
+	@if [ "$(SIGNING_IDENTITY)" = "-" ] && [ "$(ALLOW_ADHOC_PACKAGE)" != "1" ]; then \
+		echo "Error: refusing to package an ad-hoc signed build for distribution." >&2; \
+		echo "  Ad-hoc signing makes the designated requirement a bare cdhash, which pins" >&2; \
+		echo "  the user's Accessibility/Input Monitoring grants to one exact binary." >&2; \
+		echo "  Set SIGNING_IDENTITY to your Developer ID certificate, or pass" >&2; \
+		echo "  ALLOW_ADHOC_PACKAGE=1 for a local-only artifact you will not distribute." >&2; \
+		exit 1; \
 	fi
 
 package-permission-test-dmg: _check-direct-distribution _check-signing package-dmg

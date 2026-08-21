@@ -642,6 +642,11 @@ struct SettingsView: View {
 
     private var diagnosticsSection: some View {
         Section("Diagnostics") {
+            if permissionsLikelyStaleAfterUpdate(), !engine.hasPostEvent || !engine.hasMicrophone {
+                StalePermissionRecoveryView(maxWidth: nil)
+                    .padding(.vertical, 4)
+            }
+
             helperText("Use this tab when something is not recording, transcribing, or inserting text.")
 
             statusRow(
