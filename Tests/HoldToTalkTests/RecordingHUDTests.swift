@@ -3,6 +3,23 @@ import XCTest
 @testable import HoldToTalk
 
 final class RecordingHUDTests: XCTestCase {
+    @MainActor
+    func testHUDPanelDoesNotSwallowClicks() {
+        // The overlay is informational. Without this it blocks clicks across a
+        // 332x108 region at the bottom of every screen while recording.
+        let panel = NSPanel(
+            contentRect: NSRect(x: 0, y: 0, width: 332, height: 108),
+            styleMask: [.borderless, .nonactivatingPanel],
+            backing: .buffered,
+            defer: true
+        )
+        XCTAssertFalse(panel.ignoresMouseEvents, "precondition: AppKit default is to receive clicks")
+
+        configureHUDPanelForPassthrough(panel)
+
+        XCTAssertTrue(panel.ignoresMouseEvents)
+    }
+
     func testRestingOriginCentersHUDIndependentlyOnEachScreen() {
         let panelSize = CGSize(width: 300, height: 108)
         let primary = recordingHUDRestingOrigin(

@@ -13,6 +13,20 @@ func recordingHUDRestingOrigin(
     )
 }
 
+/// Makes the HUD purely visual.
+///
+/// The overlay shows state and a waveform and has nothing to click, but a
+/// borderless panel still swallows every click inside its frame — a 332x108
+/// area at the bottom of *each* screen, over whatever the user was trying to
+/// reach while dictating. Not activating is not enough on its own; the panel
+/// has to opt out of hit-testing entirely.
+///
+/// If the HUD ever gains a control, this has to go and the panel needs real
+/// hit-testing instead.
+func configureHUDPanelForPassthrough(_ panel: NSPanel) {
+    panel.ignoresMouseEvents = true
+}
+
 // MARK: - Non-activating Panel
 
 private final class HUDPanel: NSPanel {
@@ -130,6 +144,7 @@ final class RecordingHUD {
         ]
         panel.isMovable = false
         panel.isMovableByWindowBackground = false
+        configureHUDPanelForPassthrough(panel)
 
         let hosting = TransparentHostingView(rootView: HUDContentView(model: model))
         hosting.frame = NSRect(origin: .zero, size: Self.size)
