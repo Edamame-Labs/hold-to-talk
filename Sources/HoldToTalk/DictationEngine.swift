@@ -65,6 +65,7 @@ final class DictationEngine: ObservableObject {
     @AppStorage(textCleanupEnabledDefaultsKey) var textCleanupEnabled = CleanupProvider.defaultForThisMac().isReadyWithoutSetup
     @AppStorage(textCleanupPromptDefaultsKey) var textCleanupPrompt = TextCleanup.defaultPrompt
     @AppStorage(hotwordsDefaultsKey) var hotwords: String = ""
+    @AppStorage(recordingHUDPositionDefaultsKey) var recordingHUDPosition = RecordingHUDPosition.bottom.rawValue
     /// Empty means "mirror the system's chosen input" — the app does not pick a
     /// microphone for the user.
     @AppStorage(preferredInputDeviceUIDDefaultsKey) var preferredInputDeviceUID = ""
@@ -316,6 +317,7 @@ final class DictationEngine: ObservableObject {
         textCleanupEnabled = CleanupProvider.defaultForThisMac().isReadyWithoutSetup
         textCleanupPrompt = TextCleanup.defaultPrompt
         hotwords = ""
+        recordingHUDPosition = RecordingHUDPosition.bottom.rawValue
         preferredInputDeviceUID = ""
         transcriptionProvider = TranscriptionProvider.local.rawValue
         dictationLanguageMode = DictationLanguageMode.english.rawValue
@@ -355,6 +357,10 @@ final class DictationEngine: ObservableObject {
 
     /// The microphone capture will actually use, after falling back to the
     /// system default when the chosen device is absent.
+    var resolvedRecordingHUDPosition: RecordingHUDPosition {
+        RecordingHUDPosition(rawValue: recordingHUDPosition) ?? .bottom
+    }
+
     var resolvedInputDevice: AudioInputDeviceInfo? {
         AudioInputDevice.resolvedInput(preferredUID: preferredInputDeviceUID)
     }

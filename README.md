@@ -92,6 +92,7 @@ make test-reset     # full uninstall + reset all state + reset permissions
 
 | Setting | Default | Options |
 |---|---|---|
+| Recording overlay position | Bottom | Bottom, Top, Follow Pointer |
 | Hotkey | Fn | Fn, Control, Option, Command, Shift, F13-F19, Option+Space, Control+Space, Command+Shift+Space |
 | Transcription profile | Balanced | Fast, Balanced, Best |
 | Transcription provider | On-Device | On-Device, OpenAI (your key) |

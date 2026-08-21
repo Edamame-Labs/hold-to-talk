@@ -230,7 +230,19 @@ struct SettingsView: View {
         }
     }
 
+    // Overlay placement, then the hold key itself.
+    @ViewBuilder
     private var hotkeySection: some View {
+        Section("Recording Overlay") {
+            Picker("Position", selection: $engine.recordingHUDPosition) {
+                ForEach(RecordingHUDPosition.allCases) { position in
+                    Text(position.displayName).tag(position.rawValue)
+                }
+            }
+            helperText(engine.resolvedRecordingHUDPosition.summary)
+            helperText("The overlay never takes clicks — you can keep working underneath it while dictating.")
+        }
+
         Section("Hold Key") {
             helperText("Choose what you hold while speaking. Release the key to transcribe and insert text.")
 
