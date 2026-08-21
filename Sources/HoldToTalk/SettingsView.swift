@@ -12,6 +12,7 @@ struct SettingsView: View {
     @State private var launchAtLogin: Bool = UserDefaults.standard.bool(forKey: launchAtLoginDefaultsKey)
     @State private var isRunningEnvironmentFix = false
     @State private var pendingFixKeyboardAccess = false
+    @State private var availableInputs: [AudioInputDeviceInfo] = []
     @State private var diagnosticsMessage: String?
     @State private var selectedSection: SettingsSection = .general
     @AppStorage(diagnosticLoggingEnabledDefaultsKey) private var diagnosticLoggingEnabled = false
@@ -241,7 +242,42 @@ struct SettingsView: View {
         }
     }
 
+    // Two sections now: microphone selection, then dictation itself.
+    @ViewBuilder
     private var dictationSection: some View {
+        Section("Microphone") {
+            Picker("Microphone", selection: $engine.preferredInputDeviceUID) {
+                Text("Follow System Setting").tag("")
+                ForEach(availableInputs) { device in
+                    Text(device.name).tag(device.uid)
+                }
+            }
+            .onChange(of: engine.preferredInputDeviceUID) {
+                engine.reloadInputDevice()
+            }
+
+            if AudioInputDevice.preferredInputIsMissing(
+                preferredUID: engine.preferredInputDeviceUID,
+                available: availableInputs
+            ) {
+                Label(
+                    "That microphone isn't connected. Using the system input until it is back.",
+                    systemImage: "exclamationmark.triangle.fill"
+                )
+                .font(.caption)
+                .foregroundStyle(.orange)
+            }
+
+            if let device = engine.resolvedInputDevice, device.isBluetooth {
+                bluetoothInputNotice(device)
+            } else {
+                helperText("Hold to Talk follows the input chosen in System Settings unless you pick one here.")
+            }
+        }
+        .task {
+            availableInputs = AudioInputDevice.availableInputs()
+        }
+
         Section("Dictation") {
             helperText("Dictation turns speech into text. Cleanup happens afterward and can use a different provider.")
 
@@ -486,6 +522,28 @@ struct SettingsView: View {
         .onChange(of: cleanupModelManager.isDownloaded) {
             engine.reloadCleanupProvider()
         }
+    }
+
+    /// Bluetooth headsets cannot be a microphone and a good speaker at once, so
+    /// say what choosing one costs instead of quietly switching away from it.
+    @ViewBuilder
+    private func bluetoothInputNotice(_ device: AudioInputDeviceInfo) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Label("\(device.name) is a Bluetooth microphone", systemImage: "info.circle.fill")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.orange)
+
+            Text("While it is used as a microphone, Bluetooth drops it out of high-quality stereo into call mode — everything you hear through it becomes quieter and mono. That is a limit of Bluetooth itself, not of Hold to Talk.")
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+
+            Text("Recording also starts about 140ms slower, because keeping this device ready would hold your audio in call mode the whole time the app is running. Choose a built-in or wired microphone to avoid both.")
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .padding(.vertical, 2)
     }
 
     // MARK: - Cleanup Model Status

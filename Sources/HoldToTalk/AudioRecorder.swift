@@ -57,12 +57,61 @@ final class AudioRecorder: @unchecked Sendable {
     var levelHandler: (@Sendable (Float) -> Void)?
     var onMaxDurationReached: (@Sendable () -> Void)?
 
+    /// UID of the microphone the user picked, or nil/empty to mirror the
+    /// system's chosen input. Set before `prepare()` or `start()`.
+    private var preferredInputUID: String?
+
+    /// A Bluetooth route is not usable the instant the device appears — the
+    /// profile switch takes a moment, and starting into it fails or yields
+    /// silence. Retry briefly rather than reporting a dead microphone.
+    static let bluetoothStartAttempts = 3
+    static let bluetoothStartRetryDelay: TimeInterval = 0.08
+
+    func setPreferredInputUID(_ uid: String?) {
+        lock.lock()
+        let changed = preferredInputUID != uid
+        preferredInputUID = uid
+        lock.unlock()
+        guard changed else { return }
+        refreshPrewarmForCurrentInput()
+    }
+
+    private var currentPreferredInputUID: String? {
+        lock.lock()
+        defer { lock.unlock() }
+        return preferredInputUID
+    }
+
+    /// Points the engine's input unit at the resolved device.
+    ///
+    /// Only applied when the user picked a specific microphone; otherwise the
+    /// engine keeps following the system default on its own.
+    private func applyPreferredInputDevice() {
+        guard let uid = currentPreferredInputUID, !uid.isEmpty,
+              let device = AudioInputDevice.resolvedInput(preferredUID: uid),
+              device.uid == uid,
+              let unit = engine.inputNode.audioUnit else { return }
+
+        var deviceID = device.id
+        let status = AudioUnitSetProperty(
+            unit,
+            kAudioOutputUnitProperty_CurrentDevice,
+            kAudioUnitScope_Global,
+            0,
+            &deviceID,
+            UInt32(MemoryLayout<AudioDeviceID>.size)
+        )
+        if status != noErr {
+            debugLog("[holdtotalk] Could not select input device \(device.name) (OSStatus \(status)); falling back to system default")
+        }
+    }
+
     /// Pre-warms the audio engine so subsequent start() calls are near-instant.
     /// Call once at app startup. Safe to call multiple times.
     ///
     /// No-op when the default input is Bluetooth — see the type comment.
     func prepare() {
-        guard !AudioInputDevice.prewarmWouldDegradePlayback else {
+        guard !AudioInputDevice.prewarmWouldDegradePlayback(preferredUID: currentPreferredInputUID) else {
             debugLog("[holdtotalk] Skipping audio pre-warm: Bluetooth input would drop playback to call quality")
             return
         }
@@ -74,6 +123,7 @@ final class AudioRecorder: @unchecked Sendable {
         // Accessing inputNode implicitly connects it to the engine graph, which
         // opens the input device.
         _ = engine.inputNode
+        applyPreferredInputDevice()
         engine.prepare()
     }
 
@@ -95,7 +145,7 @@ final class AudioRecorder: @unchecked Sendable {
 
     /// Re-evaluates the current input and warms or releases accordingly.
     func refreshPrewarmForCurrentInput() {
-        if AudioInputDevice.prewarmWouldDegradePlayback {
+        if AudioInputDevice.prewarmWouldDegradePlayback(preferredUID: currentPreferredInputUID) {
             releasePrewarmedInput()
         } else {
             prepare()
@@ -116,6 +166,7 @@ final class AudioRecorder: @unchecked Sendable {
         lock.unlock()
         levelHandler?(0)
 
+        applyPreferredInputDevice()
         let input = engine.inputNode
         let nativeFormat = input.outputFormat(forBus: 0)
         let maxFrames = Int(nativeFormat.sampleRate) * Self.maxRecordingSeconds
@@ -147,12 +198,36 @@ final class AudioRecorder: @unchecked Sendable {
         tapInstalled = true
 
         do {
-            try engine.start()
+            try startEngineAllowingBluetoothToSettle()
         } catch {
             input.removeTap(onBus: 0)
             tapInstalled = false
             throw error
         }
+    }
+
+    private func startEngineAllowingBluetoothToSettle() throws {
+        let isBluetooth = AudioInputDevice
+            .resolvedInput(preferredUID: currentPreferredInputUID)?.isBluetooth ?? false
+        let attempts = isBluetooth ? Self.bluetoothStartAttempts : 1
+
+        var lastError: Error?
+        for attempt in 1...attempts {
+            do {
+                try engine.start()
+                if attempt > 1 {
+                    debugLog("[holdtotalk] Bluetooth input started on attempt \(attempt)")
+                }
+                return
+            } catch {
+                lastError = error
+                guard attempt < attempts else { break }
+                debugLog("[holdtotalk] Bluetooth input not ready (attempt \(attempt)), retrying")
+                Thread.sleep(forTimeInterval: Self.bluetoothStartRetryDelay)
+                engine.reset()
+            }
+        }
+        throw lastError ?? AudioRecorderError.alreadyRecording
     }
 
     func stop() -> [Float] {
@@ -161,7 +236,7 @@ final class AudioRecorder: @unchecked Sendable {
             tapInstalled = false
         }
         engine.stop()
-        if AudioInputDevice.prewarmWouldDegradePlayback {
+        if AudioInputDevice.prewarmWouldDegradePlayback(preferredUID: currentPreferredInputUID) {
             // Let the device close so a Bluetooth headset returns to A2DP
             // between dictations instead of staying in call mode.
             engine.reset()

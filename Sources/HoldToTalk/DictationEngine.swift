@@ -65,6 +65,9 @@ final class DictationEngine: ObservableObject {
     @AppStorage(textCleanupEnabledDefaultsKey) var textCleanupEnabled = CleanupProvider.defaultForThisMac().isReadyWithoutSetup
     @AppStorage(textCleanupPromptDefaultsKey) var textCleanupPrompt = TextCleanup.defaultPrompt
     @AppStorage(hotwordsDefaultsKey) var hotwords: String = ""
+    /// Empty means "mirror the system's chosen input" — the app does not pick a
+    /// microphone for the user.
+    @AppStorage(preferredInputDeviceUIDDefaultsKey) var preferredInputDeviceUID = ""
     @AppStorage(transcriptionProviderDefaultsKey) var transcriptionProvider = TranscriptionProvider.local.rawValue
     @AppStorage(dictationLanguageModeDefaultsKey) var dictationLanguageMode = DictationLanguageMode.english.rawValue
     @AppStorage(cleanupProviderDefaultsKey) var cleanupProvider = CleanupProvider.defaultForThisMac().rawValue
@@ -228,6 +231,7 @@ final class DictationEngine: ObservableObject {
             debugLog("[holdtotalk] PostEvent (keyboard access) missing -- prompt deferred to onboarding/settings.")
         }
 
+        recorder.setPreferredInputUID(preferredInputDeviceUID)
         recorder.prepare()
         // Connecting AirPods while the app is idle would otherwise leave the
         // input pre-warmed and playback stuck in call quality.
@@ -312,6 +316,7 @@ final class DictationEngine: ObservableObject {
         textCleanupEnabled = CleanupProvider.defaultForThisMac().isReadyWithoutSetup
         textCleanupPrompt = TextCleanup.defaultPrompt
         hotwords = ""
+        preferredInputDeviceUID = ""
         transcriptionProvider = TranscriptionProvider.local.rawValue
         dictationLanguageMode = DictationLanguageMode.english.rawValue
         cleanupProvider = CleanupProvider.defaultForThisMac().rawValue
@@ -340,6 +345,18 @@ final class DictationEngine: ObservableObject {
         if let failure = hotkeyManager.lastRegistrationFailure {
             lastError = failure
         }
+    }
+
+    /// Applies a microphone change immediately, including releasing a pre-warmed
+    /// input when the new choice is a Bluetooth device.
+    func reloadInputDevice() {
+        recorder.setPreferredInputUID(preferredInputDeviceUID)
+    }
+
+    /// The microphone capture will actually use, after falling back to the
+    /// system default when the chosen device is absent.
+    var resolvedInputDevice: AudioInputDeviceInfo? {
+        AudioInputDevice.resolvedInput(preferredUID: preferredInputDeviceUID)
     }
 
     /// Invalidates the current transcriber so the next dictation recreates it with updated hotwords.
