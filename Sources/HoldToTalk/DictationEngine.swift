@@ -60,7 +60,9 @@ final class DictationEngine: ObservableObject {
     @AppStorage(onboardingCompleteDefaultsKey) var onboardingComplete = false
     @AppStorage(transcriptionProfileDefaultsKey) var transcriptionProfile = TranscriptionProfile.balanced.rawValue
     @AppStorage(hotkeyChoiceDefaultsKey) var hotkeyChoice = HotkeyManager.Hotkey.fn.rawValue
-    @AppStorage(textCleanupEnabledDefaultsKey) var textCleanupEnabled = TextCleanup.checkAvailability() == .available
+    // Enabled only when the default provider can actually run — otherwise the
+    // first dictation would report a missing model instead of just working.
+    @AppStorage(textCleanupEnabledDefaultsKey) var textCleanupEnabled = CleanupProvider.defaultForThisMac().isReadyWithoutSetup
     @AppStorage(textCleanupPromptDefaultsKey) var textCleanupPrompt = TextCleanup.defaultPrompt
     @AppStorage(hotwordsDefaultsKey) var hotwords: String = ""
     @AppStorage(transcriptionProviderDefaultsKey) var transcriptionProvider = TranscriptionProvider.local.rawValue
@@ -307,7 +309,7 @@ final class DictationEngine: ObservableObject {
         UserDefaults.standard.set(0, forKey: onboardingStepDefaultsKey)
         transcriptionProfile = TranscriptionProfile.balanced.rawValue
         hotkeyChoice = HotkeyManager.Hotkey.fn.rawValue
-        textCleanupEnabled = TextCleanup.checkAvailability() == .available
+        textCleanupEnabled = CleanupProvider.defaultForThisMac().isReadyWithoutSetup
         textCleanupPrompt = TextCleanup.defaultPrompt
         hotwords = ""
         transcriptionProvider = TranscriptionProvider.local.rawValue

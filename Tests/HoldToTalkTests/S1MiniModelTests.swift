@@ -233,6 +233,19 @@ struct S1MiniModelTests {
         #expect(!CleanupProvider.localS1Mini.supports(.multilingual))
     }
 
+    @Test("S1-mini is the default wherever the language allows")
+    func s1MiniIsTheDefault() {
+        #expect(CleanupProvider.defaultForThisMac(languageMode: .english) == .localS1Mini)
+        // It cannot be the default for multilingual, so Apple Intelligence is.
+        #expect(CleanupProvider.defaultForThisMac(languageMode: .multilingual) == .appleIntelligence)
+    }
+
+    @Test("Cloud providers always need setup")
+    func cloudProvidersNeedSetup() {
+        #expect(!CleanupProvider.openAI.isReadyWithoutSetup)
+        #expect(!CleanupProvider.anthropic.isReadyWithoutSetup)
+    }
+
     @Test("Language mode never defaults to a cloud provider")
     func defaultsStayLocalInEveryMode() {
         for mode in DictationLanguageMode.allCases {

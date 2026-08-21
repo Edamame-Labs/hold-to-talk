@@ -247,19 +247,29 @@ enum CleanupProvider: String, CaseIterable, Identifiable {
         return stored
     }
 
-    private static let appleIntelligenceAvailable: Bool = {
-        TextCleanup.checkAvailability() == .available
-    }()
+    /// Whether this provider can run right now without the user setting
+    /// anything up — no download, no API key, no OS feature to enable.
+    var isReadyWithoutSetup: Bool {
+        switch self {
+        case .localS1Mini:       return CleanupModelManager.isModelDownloaded
+        case .appleIntelligence: return TextCleanup.checkAvailability() == .available
+        case .openAI, .anthropic: return false
+        }
+    }
 
-    /// Apple Intelligence when this Mac has it, otherwise the on-device model
-    /// where the language allows. The default never sends transcripts off the
-    /// machine — a cloud provider is only ever an explicit choice.
+    /// S1-mini wherever the language allows, otherwise Apple Intelligence.
+    ///
+    /// S1-mini is preferred even on Macs that have Apple Intelligence: it is
+    /// trained for this one task rather than prompted into it, and it is fast
+    /// and consistent where the alternatives are not. It costs a one-time
+    /// download, which is why `textCleanupEnabled` defaults off until the model
+    /// is actually present.
+    ///
+    /// The default never sends transcripts off the machine — a cloud provider is
+    /// only ever an explicit choice.
     static func defaultForThisMac(
         languageMode: DictationLanguageMode = .english
     ) -> CleanupProvider {
-        if appleIntelligenceAvailable { return .appleIntelligence }
-        return CleanupProvider.localS1Mini.supports(languageMode)
-            ? .localS1Mini
-            : .appleIntelligence
+        CleanupProvider.localS1Mini.supports(languageMode) ? .localS1Mini : .appleIntelligence
     }
 }

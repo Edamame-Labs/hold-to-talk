@@ -96,7 +96,7 @@ make test-reset     # full uninstall + reset all state + reset permissions
 | Transcription profile | Balanced | Fast, Balanced, Best |
 | Transcription provider | On-Device | On-Device, OpenAI (your key) |
 | Dictation language | English | English, Multilingual — decides which cleanup providers are offered |
-| Text cleanup | On (if available) | On/Off — S1-mini (on-device), Apple Intelligence, OpenAI, or Anthropic (your key) |
+| Text cleanup | On once the on-device model is downloaded | On/Off — S1-mini (on-device, default), Apple Intelligence, OpenAI, or Anthropic (your key) |
 | Cleanup writing style | Semi-formal | Casual, Semi-casual, Semi-formal, Formal (S1-mini only) |
 | Cleanup formatting | Prose | Prose, Allow lists (S1-mini only) |
 | Cleanup prompt | (default) | Customizable instructions (Apple Intelligence and cloud providers) |
