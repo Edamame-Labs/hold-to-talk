@@ -35,6 +35,13 @@ private final class ConverterInput: @unchecked Sendable {
 ///
 /// The audio engine is pre-warmed on `prepare()` so that `start()` only installs
 /// a tap and resumes — cutting hotkey-to-recording latency from ~150ms to <10ms.
+///
+/// Pre-warming is skipped for Bluetooth inputs. Touching `inputNode` opens the
+/// input device, and macOS can only offer a Bluetooth headset as an input by
+/// switching it out of A2DP into the hands-free profile — which drops playback
+/// to call quality for as long as the app is running. Trading the user's audio
+/// for 140ms is not a trade worth making, so those devices pay the latency on
+/// first use instead.
 final class AudioRecorder: @unchecked Sendable {
     /// Maximum recording length before `onMaxDurationReached` fires (seconds).
     static let maxRecordingSeconds = 300
@@ -52,14 +59,47 @@ final class AudioRecorder: @unchecked Sendable {
 
     /// Pre-warms the audio engine so subsequent start() calls are near-instant.
     /// Call once at app startup. Safe to call multiple times.
+    ///
+    /// No-op when the default input is Bluetooth — see the type comment.
     func prepare() {
+        guard !AudioInputDevice.prewarmWouldDegradePlayback else {
+            debugLog("[holdtotalk] Skipping audio pre-warm: Bluetooth input would drop playback to call quality")
+            return
+        }
+
         lock.lock()
         guard !isPrepared else { lock.unlock(); return }
         isPrepared = true
         lock.unlock()
-        // Accessing inputNode implicitly connects it to the engine graph.
+        // Accessing inputNode implicitly connects it to the engine graph, which
+        // opens the input device.
         _ = engine.inputNode
         engine.prepare()
+    }
+
+    /// Releases the pre-warmed input so playback can return to full quality.
+    ///
+    /// Called when the default input becomes a Bluetooth device after the engine
+    /// was already warmed — plugging in AirPods should not silently downgrade
+    /// audio until the app is quit.
+    func releasePrewarmedInput() {
+        lock.lock()
+        guard isPrepared, !tapInstalled else { lock.unlock(); return }
+        isPrepared = false
+        lock.unlock()
+
+        engine.stop()
+        engine.reset()
+        debugLog("[holdtotalk] Released pre-warmed audio input")
+    }
+
+    /// Re-evaluates the current input and warms or releases accordingly.
+    func refreshPrewarmForCurrentInput() {
+        if AudioInputDevice.prewarmWouldDegradePlayback {
+            releasePrewarmedInput()
+        } else {
+            prepare()
+        }
     }
 
     func start() throws {
@@ -121,10 +161,19 @@ final class AudioRecorder: @unchecked Sendable {
             tapInstalled = false
         }
         engine.stop()
-        // Re-prepare so the next start() is fast again.
-        // Calls AVAudioEngine.prepare() directly — intentionally bypasses AudioRecorder.prepare()'s
-        // isPrepared guard so the engine is re-warmed on every stop, keeping it hot-standby.
-        engine.prepare()
+        if AudioInputDevice.prewarmWouldDegradePlayback {
+            // Let the device close so a Bluetooth headset returns to A2DP
+            // between dictations instead of staying in call mode.
+            engine.reset()
+            lock.lock()
+            isPrepared = false
+            lock.unlock()
+        } else {
+            // Re-prepare so the next start() is fast again.
+            // Calls AVAudioEngine.prepare() directly — intentionally bypasses AudioRecorder.prepare()'s
+            // isPrepared guard so the engine is re-warmed on every stop, keeping it hot-standby.
+            engine.prepare()
+        }
 
         lock.lock()
         let captured = buffers

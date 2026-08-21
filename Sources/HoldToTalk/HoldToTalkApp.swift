@@ -8,6 +8,9 @@ import Sparkle
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
     var openOnboardingHandler: (@MainActor @Sendable () -> Void)?
+    /// Opens whatever window makes sense for a reopen — onboarding while it is
+    /// unfinished, otherwise Settings.
+    var openMainWindowHandler: (@MainActor @Sendable () -> Void)?
     private var pendingInitialOnboardingOpen = false
     private var hasOpenedInitialOnboarding = false
     private var onboardingRecoveryObservers: [NSObjectProtocol] = []
@@ -51,6 +54,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationDidBecomeActive(_ notification: Notification) {
         scheduleOnboardingWindowRecovery(delay: 0.2)
+    }
+
+    /// Opening an already-running Hold to Talk from the Dock or Finder used to
+    /// do nothing visible: the only scenes are the menu bar item and two
+    /// explicitly-opened windows, so once onboarding is complete there is no
+    /// default window to restore and the app looked like it failed to launch.
+    func applicationShouldHandleReopen(
+        _ sender: NSApplication,
+        hasVisibleWindows: Bool
+    ) -> Bool {
+        guard !hasVisibleWindows else { return true }
+        NSApp.activate(ignoringOtherApps: true)
+        openMainWindowHandler?()
+        return true
     }
 
     func applicationWillTerminate(_ notification: Notification) {
@@ -608,6 +625,13 @@ struct HoldToTalkApp: App {
     private func configureAppDelegate() {
         appDelegate.setOpenOnboardingHandler {
             openOnboardingWindow()
+        }
+        appDelegate.openMainWindowHandler = {
+            if shouldShowOnboarding {
+                openWindow(id: "onboarding")
+            } else {
+                openWindow(id: "settings")
+            }
         }
     }
 

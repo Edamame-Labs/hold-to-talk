@@ -111,6 +111,8 @@ Direct distribution uses Sparkle appcast metadata in `docs/appcast.xml`. The App
 - Cloud traffic uses `cloudSession` (ephemeral `URLSession`, cookies and disk cache disabled) — no shared session.
 - Diagnostic logging is off by default. Transcript-like content goes through `debugLogSensitive(_:text:)` only.
 - `AudioRecorder.stop()` zeroes captured buffers after resampling — preserve.
+- Never pre-warm the capture engine unconditionally. Touching `engine.inputNode` opens the input device, and macOS can only expose a Bluetooth headset as an input by switching it out of A2DP into the hands-free profile — playback drops to mono call quality (measurably: 48 kHz to 24 kHz on AirPods Max) for as long as the app runs. `AudioInputDevice.prewarmWouldDegradePlayback` gates it, `stop()` respects the same check, and a default-input-change listener releases the engine when a headset connects mid-session. The 140ms latency win is not worth the user's audio.
+- The app has no default window scene — only the menu bar item plus explicitly-opened onboarding and settings windows. `applicationShouldHandleReopen` is what makes opening an already-running app from the Dock or Finder show anything; without it the app looks like it failed to launch.
 - `TextInserter` intentionally blocks secure text fields — preserve.
 - New UserDefaults keys go in `OnboardingResetHelper.swift` as top-level constants.
 - Runtime paths: models in `~/Library/Application Support/HoldToTalk/models`, debug log at `~/Library/Application Support/HoldToTalk/debug.log`.

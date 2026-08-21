@@ -87,6 +87,7 @@ final class DictationEngine: ObservableObject {
     private var transcriberWarmupTask: Task<Void, Never>?
     private var completedWarmup = false
     private var cleanupWarmupTask: Task<Void, Never>?
+    private var audioInputObservation: AudioInputObservation?
     private var dictationTask: Task<Void, Never>?
     private var activeDictationID = 0
 
@@ -226,6 +227,14 @@ final class DictationEngine: ObservableObject {
         }
 
         recorder.prepare()
+        // Connecting AirPods while the app is idle would otherwise leave the
+        // input pre-warmed and playback stuck in call quality.
+        audioInputObservation = AudioInputDevice.observeDefaultInputChanges { [weak self] in
+            Task { @MainActor [weak self] in
+                guard let self, self.state == .idle else { return }
+                self.recorder.refreshPrewarmForCurrentInput()
+            }
+        }
 
         debugLog("[holdtotalk] Permissions Mic=\(hasMicrophone), PostEvent=\(hasPostEvent)")
 
@@ -269,6 +278,8 @@ final class DictationEngine: ObservableObject {
         transcriberWarmupTask = nil
         cleanupWarmupTask?.cancel()
         cleanupWarmupTask = nil
+        audioInputObservation = nil
+        recorder.releasePrewarmedInput()
         if let activationObserver {
             NotificationCenter.default.removeObserver(activationObserver)
         }
