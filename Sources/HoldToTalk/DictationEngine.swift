@@ -443,7 +443,7 @@ final class DictationEngine: ObservableObject {
             let transcription = try await transcribe(audio, duration: duration)
             let raw = transcription.text
             let transcribeTime = Date().timeIntervalSince(transcribeStart)
-            debugLog("[holdtotalk] Transcribed \(String(format: "%.1f", duration))s audio in \(String(format: "%.2f", transcribeTime))s [\(transcription.source)]")
+            debugLog("[holdtotalk] Transcribed \(String(format: "%.1f", duration))s audio in \(String(format: "%.2f", transcribeTime))s [\(transcription.source)]\(completedWarmup ? "" : " (cold: model was not pre-warmed)")")
 
             try Task.checkCancellation()
 
