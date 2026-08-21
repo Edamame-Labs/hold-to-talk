@@ -89,25 +89,11 @@ jobs:
             dist/HoldToTalk.dmg
           generate_release_notes: true
 
-      - name: Update Homebrew tap
-        env:
-          TAP_GITHUB_TOKEN: ${{ secrets.TAP_GITHUB_TOKEN }}
-        run: |
-          ZIP_PATH="dist/HoldToTalk-v${VERSION}.zip"
-          SHA256=$(shasum -a 256 "$ZIP_PATH" | awk '{print $1}')
-
-          git clone https://x-access-token:${TAP_GITHUB_TOKEN}@github.com/Edamame-Labs/homebrew-tap.git /tmp/homebrew-tap
-          mkdir -p /tmp/homebrew-tap/Casks
-
-          sed "s/TMPL_VERSION/$VERSION/g; s/TMPL_SHA256/$SHA256/g" Casks/holdtotalk.rb > /tmp/homebrew-tap/Casks/holdtotalk.rb
-
-          cd /tmp/homebrew-tap
-          git add .
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git commit -m "Update holdtotalk to $VERSION" || true
-          git push
-
+      # Ordered before the Homebrew tap on purpose: the appcast is what
+      # reaches existing users through Sparkle, and a tap failure (an expired
+      # or under-scoped TAP_GITHUB_TOKEN, say) must not be able to hold back
+      # everyone's update. The tap step still fails the job, so the problem
+      # stays visible.
       - name: Download Sparkle tools
         run: |
           curl -sL "https://github.com/sparkle-project/Sparkle/releases/download/2.9.0/Sparkle-2.9.0.tar.xz" -o "$RUNNER_TEMP/sparkle.tar.xz"
@@ -157,6 +143,25 @@ jobs:
           git add docs/appcast.xml
           git commit -m "Update release metadata for ${RELEASE_TAG}" || true
           git push origin main
+
+      - name: Update Homebrew tap
+        env:
+          TAP_GITHUB_TOKEN: ${{ secrets.TAP_GITHUB_TOKEN }}
+        run: |
+          ZIP_PATH="dist/HoldToTalk-v${VERSION}.zip"
+          SHA256=$(shasum -a 256 "$ZIP_PATH" | awk '{print $1}')
+
+          git clone https://x-access-token:${TAP_GITHUB_TOKEN}@github.com/Edamame-Labs/homebrew-tap.git /tmp/homebrew-tap
+          mkdir -p /tmp/homebrew-tap/Casks
+
+          sed "s/TMPL_VERSION/$VERSION/g; s/TMPL_SHA256/$SHA256/g" Casks/holdtotalk.rb > /tmp/homebrew-tap/Casks/holdtotalk.rb
+
+          cd /tmp/homebrew-tap
+          git add .
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git commit -m "Update holdtotalk to $VERSION" || true
+          git push
 
       - name: Clean up keychain
         if: always()
